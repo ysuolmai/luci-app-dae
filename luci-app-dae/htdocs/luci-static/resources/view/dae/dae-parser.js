@@ -171,6 +171,108 @@ var DaeParser = {
     },
 
     /**
+     * Parse the body of a top-level `group { ... }` block.
+     * Returns { parsed: GroupDef[], rawGroups: [{name, content}] }
+     * 'parsed' contains groups whose filter we understand; 'rawGroups'
+     * contains groups whose filter has syntax outside our supported subset
+     * (multiple filter lines, regex, per-group overrides, etc.) — those
+     * are preserved in DaeConfig.rawOther so they don't get lost.
+     *
+     * Supported filter syntax:
+     *   subtag(sub1, sub2, ...)
+     *   name(node1, node2, ...)
+     *   !name(keyword: 'kw')            → push 'kw' to excludeKeywords
+     *   Above joined by ' && '
+     *
+     * If a group has filter: name(SINGLE_NODE) only, we set namePin=SINGLE_NODE
+     * to represent the "manually pin to one node" UI choice.
+     */
+    _parseGroup: function(content) {
+        var self = this;
+        var result = { parsed: [], rawGroups: [] };
+        var subBlocks = self._extractBlocks(content);
+
+        for (var groupName in subBlocks) {
+            if (groupName === '__preamble') continue;
+            var body = subBlocks[groupName];
+            var lines = body.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+
+            var filterLines = [];
+            var policyLine = null;
+            var hasUnknownLine = false;
+
+            for (var i = 0; i < lines.length; i++) {
+                var l = lines[i];
+                if (l[0] === '#') continue;
+                if (l.indexOf('filter:') === 0) {
+                    filterLines.push(l.substring('filter:'.length).trim());
+                } else if (l.indexOf('policy:') === 0) {
+                    if (policyLine !== null) { hasUnknownLine = true; break; }
+                    policyLine = l.substring('policy:'.length).trim();
+                } else {
+                    // any other line (tcp_check_url, etc.) → bail to rawGroups
+                    hasUnknownLine = true;
+                    break;
+                }
+            }
+
+            if (hasUnknownLine || filterLines.length > 1) {
+                result.rawGroups.push({ name: groupName, content: body });
+                continue;
+            }
+
+            var filter = { subscriptions: [], nodes: [], excludeKeywords: [], namePin: null };
+            var policy = policyLine || 'min_moving_avg';
+
+            if (filterLines.length === 1) {
+                var clauses = filterLines[0].split(/\s*&&\s*/);
+                var clauseOk = true;
+                for (var c = 0; c < clauses.length; c++) {
+                    var clause = clauses[c].trim();
+                    var m;
+                    if ((m = clause.match(/^subtag\(([^)]*)\)$/))) {
+                        filter.subscriptions = m[1].split(',').map(function(s){return s.trim();}).filter(Boolean);
+                    } else if ((m = clause.match(/^name\(([^)]*)\)$/))) {
+                        var args = m[1].trim();
+                        // name(keyword: 'X') is exclude when prefixed with !; positive name() = node list
+                        var kw = args.match(/^keyword:\s*['"]([^'"]+)['"]$/);
+                        if (kw) {
+                            // positive keyword filter — we don't model this; bail
+                            clauseOk = false; break;
+                        }
+                        filter.nodes = args.split(',').map(function(s){return s.trim();}).filter(Boolean);
+                    } else if ((m = clause.match(/^!name\(([^)]*)\)$/))) {
+                        var args2 = m[1].trim();
+                        var kw2 = args2.match(/^keyword:\s*['"]([^'"]+)['"]$/);
+                        if (kw2) {
+                            filter.excludeKeywords.push(kw2[1]);
+                        } else {
+                            // !name(node1) — we don't model this; bail
+                            clauseOk = false; break;
+                        }
+                    } else {
+                        clauseOk = false; break;
+                    }
+                }
+                if (!clauseOk) {
+                    result.rawGroups.push({ name: groupName, content: body });
+                    continue;
+                }
+            }
+
+            // single-node detection → namePin
+            if (filter.nodes.length === 1 && filter.subscriptions.length === 0 && filter.excludeKeywords.length === 0) {
+                filter.namePin = filter.nodes[0];
+                filter.nodes = [];
+            }
+
+            result.parsed.push({ name: groupName, filter: filter, policy: policy });
+        }
+
+        return result;
+    },
+
+    /**
      * If config.groups is empty, add a default group named `name`
      * (default 'proxy'), with all current subscription names selected and
      * 'ExpireAt' as the exclude keyword. Policy defaults to min_moving_avg.
@@ -212,13 +314,34 @@ var DaeParser = {
         if (blocks['routing'])      config.routing      = self._parseRoutingRules(blocks['routing']);
         if (blocks['dns'])          config.dns          = self._parseDNS(blocks['dns']);
 
+        // Groups (v2)
+        if (blocks['group']) {
+            var groupResult = self._parseGroup(blocks['group']);
+            config.groups = groupResult.parsed;
+            // unparseable groups → reconstruct group { ... } block in rawOther
+            if (groupResult.rawGroups.length > 0) {
+                var rawText = 'group {\n';
+                groupResult.rawGroups.forEach(function(rg) {
+                    rawText += '    ' + rg.name + ' {\n';
+                    rg.content.split('\n').forEach(function(l) {
+                        rawText += '        ' + l + '\n';
+                    });
+                    rawText += '    }\n';
+                });
+                rawText += '}';
+                // Append to rawOther later (after the existing 'known' loop)
+                blocks['__rawGroupReinject'] = rawText;
+            }
+        }
+
         // Preserve unknown blocks verbatim
-        var known = ['global', 'subscription', 'node', 'routing', 'dns', '__preamble'];
+        var known = ['global', 'subscription', 'node', 'routing', 'dns', 'group', '__preamble', '__rawGroupReinject'];
         var otherParts = blocks['__preamble'] ? [blocks['__preamble']] : [];
         for (var name in blocks) {
             if (known.indexOf(name) === -1)
                 otherParts.push(name + ' {\n' + blocks[name] + '\n}');
         }
+        if (blocks['__rawGroupReinject']) otherParts.push(blocks['__rawGroupReinject']);
         config.rawOther = otherParts.join('\n\n');
         return config;
     },

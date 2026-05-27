@@ -325,6 +325,95 @@ test('does nothing when groups already populated', function() {
     assert.strictEqual(c.groups[0].name, 'mygroup');
 });
 
+// ---- _parseGroup ----
+console.log('\n_parseGroup:');
+
+test('parses a simple group with subtag + name keyword exclude', function() {
+    var content = "    proxy {\n" +
+                  "        filter: subtag(my_sub) && !name(keyword: 'ExpireAt')\n" +
+                  "        policy: min_moving_avg\n" +
+                  "    }";
+    var groups = DaeParser._parseGroup(content);
+    assert.strictEqual(groups.parsed.length, 1);
+    var g = groups.parsed[0];
+    assert.strictEqual(g.name, 'proxy');
+    assert.deepStrictEqual(g.filter.subscriptions, ['my_sub']);
+    assert.deepStrictEqual(g.filter.excludeKeywords, ['ExpireAt']);
+    assert.strictEqual(g.filter.namePin, null);
+    assert.strictEqual(g.policy, 'min_moving_avg');
+});
+
+test('parses multiple subscriptions in subtag()', function() {
+    var content = "    g1 {\n" +
+                  "        filter: subtag(sub_a, sub_b)\n" +
+                  "        policy: random\n" +
+                  "    }";
+    var groups = DaeParser._parseGroup(content);
+    assert.deepStrictEqual(groups.parsed[0].filter.subscriptions, ['sub_a', 'sub_b']);
+    assert.strictEqual(groups.parsed[0].policy, 'random');
+});
+
+test('parses name(nodes) into filter.nodes', function() {
+    var content = "    g {\n" +
+                  "        filter: name(node1, node2)\n" +
+                  "        policy: min_moving_avg\n" +
+                  "    }";
+    var groups = DaeParser._parseGroup(content);
+    assert.deepStrictEqual(groups.parsed[0].filter.nodes, ['node1', 'node2']);
+});
+
+test('detects namePin when filter is single name() + policy min', function() {
+    var content = "    pinned {\n" +
+                  "        filter: name(HK_01)\n" +
+                  "        policy: min_moving_avg\n" +
+                  "    }";
+    var groups = DaeParser._parseGroup(content);
+    // We treat single-node-filter as namePin
+    assert.strictEqual(groups.parsed[0].filter.namePin, 'HK_01');
+});
+
+test('parses multiple groups in one block', function() {
+    var content = "    a {\n" +
+                  "        filter: subtag(s1)\n" +
+                  "        policy: min_moving_avg\n" +
+                  "    }\n" +
+                  "    b {\n" +
+                  "        filter: subtag(s2)\n" +
+                  "        policy: random\n" +
+                  "    }";
+    var groups = DaeParser._parseGroup(content);
+    assert.strictEqual(groups.parsed.length, 2);
+    assert.strictEqual(groups.parsed[0].name, 'a');
+    assert.strictEqual(groups.parsed[1].name, 'b');
+});
+
+test('unparseable group goes to rawGroups', function() {
+    var content = "    weird {\n" +
+                  "        filter: name(regex: '^HK.*$')\n" +
+                  "        policy: min_moving_avg\n" +
+                  "        tcp_check_url: 'http://example.com'\n" +
+                  "    }";
+    var groups = DaeParser._parseGroup(content);
+    assert.strictEqual(groups.parsed.length, 0);
+    assert.strictEqual(groups.rawGroups.length, 1);
+    assert.strictEqual(groups.rawGroups[0].name, 'weird');
+});
+
+test('parse() wires _parseGroup into config.groups', function() {
+    var text = "group {\n" +
+               "    proxy {\n" +
+               "        filter: subtag(my_sub) && !name(keyword: 'ExpireAt')\n" +
+               "        policy: min_moving_avg\n" +
+               "    }\n" +
+               "}\n" +
+               "subscription {\n" +
+               "    my_sub: 'https://x'\n" +
+               "}";
+    var c = DaeParser.parse(text);
+    assert.strictEqual(c.groups.length, 1);
+    assert.strictEqual(c.groups[0].name, 'proxy');
+});
+
 console.log('\n--- Results ---');
 console.log('Passed: ' + passed + '  Failed: ' + failed);
 if (failed > 0) process.exit(1);
