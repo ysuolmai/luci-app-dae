@@ -35,7 +35,9 @@ return view.extend({
                 self._activeTab = 'text';
                 ui.addNotification(null, E('p', _('Config parse error — opened in text mode: ') + e.message));
             }
-            return self._buildUI(content);
+            return self._loadNodesCache().then(function() {
+                return self._buildUI(content);
+            });
         }).catch(function(e) {
             ui.addNotification(null, E('p', e.message));
             return E('div', {}, _('Failed to load configuration.'));
@@ -790,10 +792,186 @@ return view.extend({
     },
 
     _buildNodesPane: function() {
-        return E('div', { 'class': 'cbi-section' }, _('(node list — implemented in Task 11)'));
+        var self = this;
+        var pane = E('div', { 'class': 'cbi-section' });
+
+        pane.appendChild(E('h3', {}, _('All Nodes')));
+
+        // Toolbar: refresh + filter
+        var refreshBtn = E('button', {
+            'class': 'btn cbi-button cbi-button-action',
+            'click': function() { self._refreshSubscriptionNodes(); }
+        }, '🔄 ' + _('Refresh Subscription Nodes'));
+
+        var filterSel = E('select', { 'class': 'cbi-input-select', 'id': 'nodes-filter', 'change': function() { self._renderNodesTable(); } }, [
+            E('option', { 'value': '' }, _('All sources'))
+        ]);
+
+        pane.appendChild(E('div', { 'style': 'margin-bottom:0.5em' }, [
+            refreshBtn,
+            E('span', { 'style': 'margin-left:1em' }, _('Filter by source:') + ' '),
+            filterSel
+        ]));
+
+        // Table container
+        pane.appendChild(E('div', { 'id': 'nodes-table-container' }));
+
+        // Manual add button
+        pane.appendChild(E('button', {
+            'class': 'btn cbi-button cbi-button-add',
+            'style': 'margin-top:0.5em',
+            'click': function() { self._addManualNode(); }
+        }, '+ ' + _('Add Manual Node')));
+
+        return pane;
     },
+
     _refreshNodes: function() {
-        // implemented in Task 11
+        var self = this;
+        self._loadNodesCache().then(function() {
+            self._renderFilterOptions();
+            self._renderNodesTable();
+        });
+    },
+
+    _loadNodesCache: function() {
+        var self = this;
+        return fs.read_direct('/tmp/dae-nodes-cache.json', 'text')
+            .then(function(text) {
+                try { self._nodesCache = JSON.parse(text); }
+                catch(e) { self._nodesCache = { subscriptions: {}, updated_at: 0 }; }
+            })
+            .catch(function() {
+                self._nodesCache = { subscriptions: {}, updated_at: 0 };
+            });
+    },
+
+    _renderFilterOptions: function() {
+        var self = this;
+        var sel = document.getElementById('nodes-filter');
+        if (!sel) return;
+        var current = sel.value;
+        sel.innerHTML = '';
+        sel.appendChild(E('option', { 'value': '' }, _('All sources')));
+        var cache = self._nodesCache || { subscriptions: {} };
+        Object.keys(cache.subscriptions || {}).forEach(function(s) {
+            sel.appendChild(E('option', { 'value': s, 'selected': s === current ? '' : null }, s));
+        });
+        sel.appendChild(E('option', { 'value': '__manual', 'selected': current === '__manual' ? '' : null }, _('Manual')));
+    },
+
+    _renderNodesTable: function() {
+        var self = this;
+        var container = document.getElementById('nodes-table-container');
+        if (!container) return;
+        container.innerHTML = '';
+
+        var cache = self._nodesCache || { subscriptions: {} };
+        var filterEl = document.getElementById('nodes-filter');
+        var filterVal = filterEl ? filterEl.value : '';
+
+        var rows = [];
+
+        // Subscription nodes
+        Object.keys(cache.subscriptions || {}).forEach(function(subName) {
+            if (filterVal && filterVal !== subName) return;
+            (cache.subscriptions[subName] || []).forEach(function(n) {
+                rows.push({
+                    name: n.name, protocol: n.protocol, server: n.server, port: n.port,
+                    source: subName, manual: false
+                });
+            });
+        });
+        // Manual nodes (parsed shallowly from config.node URIs — show URI as server:port)
+        if (!filterVal || filterVal === '__manual') {
+            Object.keys((self._config && self._config.node) || {}).forEach(function(n) {
+                var uri = self._config.node[n];
+                var scheme = (uri.match(/^([a-z0-9]+):\/\//) || [])[1] || '?';
+                rows.push({
+                    name: n, protocol: scheme, server: '(see URI)', port: '',
+                    source: _('manual'), manual: true, uri: uri
+                });
+            });
+        }
+
+        var table = E('table', { 'class': 'table cbi-section-table' }, [
+            E('tr', { 'class': 'cbi-section-table-titles' }, [
+                E('th', { 'class': 'cbi-section-table-cell' }, _('Name')),
+                E('th', { 'class': 'cbi-section-table-cell' }, _('Protocol')),
+                E('th', { 'class': 'cbi-section-table-cell' }, _('Server:Port')),
+                E('th', { 'class': 'cbi-section-table-cell' }, _('Source')),
+                E('th', { 'class': 'cbi-section-table-cell' }, _('Action'))
+            ])
+        ]);
+
+        if (rows.length === 0) {
+            table.appendChild(E('tr', {}, [
+                E('td', { 'colspan': 5, 'style': 'text-align:center;color:#999;padding:1em' },
+                    _('No nodes yet. Click "Refresh Subscription Nodes" or "Add Manual Node".'))
+            ]));
+        } else {
+            rows.forEach(function(r) {
+                var row = E('tr', { 'class': 'cbi-section-table-row' }, [
+                    E('td', { 'class': 'cbi-section-table-cell' }, r.name),
+                    E('td', { 'class': 'cbi-section-table-cell' }, r.protocol),
+                    E('td', { 'class': 'cbi-section-table-cell' }, r.server + (r.port ? ':' + r.port : '')),
+                    E('td', { 'class': 'cbi-section-table-cell' }, r.source),
+                    E('td', { 'class': 'cbi-section-table-cell' }, r.manual ? E('button', {
+                        'class': 'btn cbi-button cbi-button-remove',
+                        'click': function() {
+                            delete self._config.node[r.name];
+                            self._renderNodesTable();
+                        }
+                    }, _('Delete')) : '—')
+                ]);
+                table.appendChild(row);
+            });
+        }
+
+        container.appendChild(table);
+    },
+
+    _addManualNode: function() {
+        var self = this;
+        var nameInput = E('input', { 'type': 'text', 'placeholder': 'myhomeproxy', 'class': 'cbi-input-text', 'style': 'width:12em' });
+        var uriInput  = E('input', { 'type': 'text', 'placeholder': 'ss://... or vmess://...', 'class': 'cbi-input-text', 'style': 'width:30em' });
+        ui.showModal(_('Add Manual Node'), [
+            E('p', {}, _('Enter a name and the node URI:')),
+            E('div', { 'style': 'margin:0.5em 0' }, [E('label', {}, _('Name:') + ' '), nameInput]),
+            E('div', { 'style': 'margin:0.5em 0' }, [E('label', {}, _('URI:') + ' '),  uriInput]),
+            E('div', { 'class': 'right' }, [
+                E('button', { 'class': 'btn', 'click': ui.hideModal }, _('Cancel')),
+                ' ',
+                E('button', {
+                    'class': 'btn cbi-button cbi-button-action',
+                    'click': function() {
+                        var name = nameInput.value.trim();
+                        var uri  = uriInput.value.trim();
+                        if (!name.match(/^\w+$/)) { ui.addNotification(null, E('p', _('Name must be letters/digits/underscore only'))); return; }
+                        if (!uri.match(/^[a-z0-9]+:\/\//))   { ui.addNotification(null, E('p', _('URI must start with scheme://'))); return; }
+                        self._config.node = self._config.node || {};
+                        self._config.node[name] = uri;
+                        ui.hideModal();
+                        self._renderNodesTable();
+                    }
+                }, _('Add'))
+            ])
+        ]);
+    },
+
+    _refreshSubscriptionNodes: function() {
+        var self = this;
+        ui.addNotification(null, E('p', _('Fetching subscriptions… this may take a few seconds.')));
+        return fs.exec_direct('/usr/lib/luci-app-dae/list-nodes.sh', ['refresh-all'])
+            .then(function() { return self._loadNodesCache(); })
+            .then(function() {
+                self._renderFilterOptions();
+                self._renderNodesTable();
+                ui.addNotification(null, E('p', _('Nodes refreshed.')));
+            })
+            .catch(function(e) {
+                ui.addNotification(null, E('p', _('Refresh failed: ') + (e.message || e)));
+            });
     },
 
     // ── Save ─────────────────────────────────────────────────────────────────
