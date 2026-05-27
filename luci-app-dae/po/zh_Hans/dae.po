@@ -1,0 +1,275 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Project-Id-Version: PACKAGE VERSION\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: zh-Hans\n"
+"MIME-Version: 1.0\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/log.js:30
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/settings.js:63
+msgid "Collecting data…"
+msgstr "正在收集数据中…"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/settings.js:71
+msgid "Configration file"
+msgstr "配置文件"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js:13
+#: applications/luci-app-dae/root/usr/share/luci/menu.d/luci-app-dae.json:24
+msgid "Configuration"
+msgstr "配置"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/settings.js:69
+msgid "Enable"
+msgstr "启用"
+
+#: applications/luci-app-dae/root/usr/share/rpcd/acl.d/luci-app-dae.json:3
+msgid "Grant access to dae configuration"
+msgstr "授予访问 dae 配置的权限"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js:14
+msgid ""
+"Here you can edit dae configuration. It will be hot-reloaded automatically "
+"after apply."
+msgstr "您可以在此处修改 dae 配置文件。应用后会自动热重载。"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/log.js:28
+msgid "Loading..."
+msgstr "加载中..."
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/log.js:77
+#: applications/luci-app-dae/root/usr/share/luci/menu.d/luci-app-dae.json:32
+msgid "Log"
+msgstr "日志"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/log.js:46
+msgid "Log file does not exist."
+msgstr "日志文件不存在。"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/log.js:37
+msgid "Log is empty."
+msgstr "日志为空"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/settings.js:76
+msgid "Max log backups"
+msgstr "最大日志备份"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/settings.js:81
+msgid "Max log size"
+msgstr "最大日志大小"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/settings.js:33
+msgid "NOT RUNNING"
+msgstr "未运行"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/settings.js:31
+msgid "RUNNING"
+msgstr "运行中"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/log.js:83
+msgid "Refresh every %s seconds."
+msgstr "每 %s 秒刷新。"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/log.js:69
+msgctxt "scroll to top (the head) of the log file"
+msgid "Scroll to head"
+msgstr "滚动到顶部"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/log.js:60
+msgctxt "scroll to bottom (the tail) of the log file"
+msgid "Scroll to tail"
+msgstr "滚动到尾部"
+
+#: applications/luci-app-dae/root/usr/share/luci/menu.d/luci-app-dae.json:16
+msgid "Settings"
+msgstr "设置"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/settings.js:77
+msgid "The maximum number of old log files to retain."
+msgstr "要保留的最大旧日志文件数量。"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/settings.js:82
+msgid "The maximum size in megabytes of the log file before it gets rotated."
+msgstr "要保留的最大日志大小（单位：MB）。"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/log.js:50
+msgid "Unknown error: %s"
+msgstr "未知错误：%s"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/settings.js:31
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/settings.js:33
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/settings.js:49
+#: applications/luci-app-dae/root/usr/share/luci/menu.d/luci-app-dae.json:3
+msgid "dae"
+msgstr "dae"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/settings.js:50
+msgid "eBPF-based Linux high-performance transparent proxy solution."
+msgstr "基于 eBPF 的 Linux 高性能透明代理解决方案。"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Form"
+msgstr "表单模式"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Text"
+msgstr "文本模式"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Subscriptions"
+msgstr "订阅"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Subscription URL"
+msgstr "订阅 URL"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Add Subscription"
+msgstr "添加订阅"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Nodes (Manual)"
+msgstr "节点（手动）"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Node URI"
+msgstr "节点 URI"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Add Node"
+msgstr "添加节点"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Routing Rules"
+msgstr "路由规则"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Condition Type"
+msgstr "条件类型"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Condition Value"
+msgstr "条件值"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Operation"
+msgstr "操作"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Fallback"
+msgstr "兜底动作"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Move Up"
+msgstr "上移"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Move Down"
+msgstr "下移"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Add Rule"
+msgstr "添加规则"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "DNS"
+msgstr "DNS"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Upstream Servers"
+msgstr "上游服务器"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Add Upstream"
+msgstr "添加上游"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "DNS Routing"
+msgstr "DNS 路由"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Domestic DNS"
+msgstr "国内 DNS"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Foreign DNS"
+msgstr "国外 DNS"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Custom DNS routing detected. Edit in text mode."
+msgstr "检测到自定义 DNS 路由规则，请在文本模式下编辑。"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Global Settings"
+msgstr "全局设置"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Log Level"
+msgstr "日志级别"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "LAN Interface"
+msgstr "LAN 接口"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "WAN Interface"
+msgstr "WAN 接口"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Allow Insecure"
+msgstr "允许不安全连接"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Auto Config Kernel Parameter"
+msgstr "自动配置内核参数"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "-- select --"
+msgstr "-- 请选择 --"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Configuration saved and dae reloaded."
+msgstr "配置已保存，dae 已热重载。"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Failed to load configuration."
+msgstr "加载配置失败。"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Config text has errors. Please fix before switching to form mode."
+msgstr "配置文本有错误，请修正后再切换到表单模式。"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Failed to serialize form: "
+msgstr "表单序列化失败："
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "e.g. my_sub"
+msgstr "例如 my_sub"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Letters, digits, underscore only"
+msgstr "只允许字母、数字、下划线"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Name"
+msgstr "名称"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Action"
+msgstr "操作"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "URL"
+msgstr "URL"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Delete"
+msgstr "删除"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Config parse error — opened in text mode: "
+msgstr "配置解析失败，已切换到文本模式："

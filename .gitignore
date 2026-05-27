@@ -1,0 +1,12 @@
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts (none expected here, but defensive)
+*.ipk
