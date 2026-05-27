@@ -347,10 +347,41 @@ var DaeParser = {
     },
 
     /**
+     * Render a GroupDef.filter object back to the dae filter line string.
+     * Mirrors _parseGroup's supported subset.
+     *
+     * Output format (joined by ' && '):
+     *   namePin set:        name(NODENAME)                (subscriptions/nodes/exclude ignored)
+     *   subscriptions:      subtag(s1, s2, ...)
+     *   nodes:              name(n1, n2, ...)
+     *   excludeKeywords:    !name(keyword: 'kw')          (one per keyword)
+     * If everything is empty → return '' so we emit no `filter:` line at all.
+     */
+    _serializeFilter: function(filter) {
+        if (filter.namePin) {
+            return 'name(' + filter.namePin + ')';
+        }
+        var parts = [];
+        if (filter.subscriptions && filter.subscriptions.length > 0) {
+            parts.push('subtag(' + filter.subscriptions.join(', ') + ')');
+        }
+        if (filter.nodes && filter.nodes.length > 0) {
+            parts.push('name(' + filter.nodes.join(', ') + ')');
+        }
+        if (filter.excludeKeywords && filter.excludeKeywords.length > 0) {
+            filter.excludeKeywords.forEach(function(kw) {
+                parts.push("!name(keyword: '" + kw + "')");
+            });
+        }
+        return parts.join(' && ');
+    },
+
+    /**
      * Serialize DaeConfig → dae DSL string.
-     * Order: global → subscription → node → dns → routing → rawOther
+     * Order: global → subscription → node → dns → group → routing → rawOther
      */
     serialize: function(config) {
+        var self = this;
         var parts = [];
         var g = config.global || {}, gk = Object.keys(g);
         if (gk.length) {
@@ -402,6 +433,21 @@ var DaeParser = {
                 ls.push('    }');
             }
             ls.push('}'); parts.push(ls.join('\n'));
+        }
+
+        // groups
+        var groups = config.groups || [];
+        if (groups.length > 0) {
+            var ls = ['group {'];
+            groups.forEach(function(g) {
+                ls.push('    ' + g.name + ' {');
+                var filterStr = self._serializeFilter(g.filter || {});
+                if (filterStr) ls.push('        filter: ' + filterStr);
+                ls.push('        policy: ' + (g.policy || 'min_moving_avg'));
+                ls.push('    }');
+            });
+            ls.push('}');
+            parts.push(ls.join('\n'));
         }
 
         var routing = config.routing || {};

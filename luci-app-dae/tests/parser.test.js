@@ -414,6 +414,75 @@ test('parse() wires _parseGroup into config.groups', function() {
     assert.strictEqual(c.groups[0].name, 'proxy');
 });
 
+// ---- serialize() with groups ----
+console.log('\nserialize() with groups:');
+
+test('serializes a basic group with subtag and exclude', function() {
+    var config = {
+        global: {}, subscription: {'my_sub': 'https://x'}, node: {},
+        groups: [{
+            name: 'proxy',
+            filter: { subscriptions: ['my_sub'], nodes: [], excludeKeywords: ['ExpireAt'], namePin: null },
+            policy: 'min_moving_avg'
+        }],
+        routing: { rules: [], fallback: 'proxy' },
+        dns: { upstream: {}, domestic: '', foreign: '', rawRouting: '' },
+        rawOther: ''
+    };
+    var s = DaeParser.serialize(config);
+    assert.ok(s.indexOf('group {') >= 0);
+    assert.ok(s.indexOf("filter: subtag(my_sub) && !name(keyword: 'ExpireAt')") >= 0);
+    assert.ok(s.indexOf('policy: min_moving_avg') >= 0);
+});
+
+test('serializes group block before routing block', function() {
+    var config = {
+        global: {}, subscription: {}, node: {},
+        groups: [{ name: 'p', filter: {subscriptions:[], nodes:[], excludeKeywords:[], namePin:null}, policy: 'random' }],
+        routing: { rules: [], fallback: 'p' },
+        dns: { upstream: {}, domestic: '', foreign: '', rawRouting: '' },
+        rawOther: ''
+    };
+    var s = DaeParser.serialize(config);
+    assert.ok(s.indexOf('group {') < s.indexOf('routing {'), 'group must come before routing');
+});
+
+test('serializes namePin as filter: name(NODE)', function() {
+    var config = {
+        global: {}, subscription: {}, node: {},
+        groups: [{ name: 'pin', filter: {subscriptions:[], nodes:[], excludeKeywords:[], namePin: 'HK_01'}, policy: 'min_moving_avg' }],
+        routing: { rules: [], fallback: 'pin' },
+        dns: { upstream: {}, domestic: '', foreign: '', rawRouting: '' },
+        rawOther: ''
+    };
+    var s = DaeParser.serialize(config);
+    assert.ok(s.indexOf('filter: name(HK_01)') >= 0);
+});
+
+test('omits group block when groups array is empty', function() {
+    var config = {
+        global: {}, subscription: {}, node: {}, groups: [],
+        routing: { rules: [], fallback: 'direct' },
+        dns: { upstream: {}, domestic: '', foreign: '', rawRouting: '' },
+        rawOther: ''
+    };
+    var s = DaeParser.serialize(config);
+    assert.strictEqual(s.indexOf('group {'), -1);
+});
+
+test('group round-trip preserves shape', function() {
+    var text =
+        "subscription {\n    my_sub: 'https://x'\n}\n\n" +
+        "group {\n    proxy {\n        filter: subtag(my_sub) && !name(keyword: 'ExpireAt')\n        policy: min_moving_avg\n    }\n}\n\n" +
+        "routing {\n    fallback: proxy\n}";
+    var c1 = DaeParser.parse(text);
+    var s = DaeParser.serialize(c1);
+    var c2 = DaeParser.parse(s);
+    assert.deepStrictEqual(c2.groups, c1.groups);
+    assert.deepStrictEqual(c2.subscription, c1.subscription);
+    assert.strictEqual(c2.routing.fallback, c1.routing.fallback);
+});
+
 console.log('\n--- Results ---');
 console.log('Passed: ' + passed + '  Failed: ' + failed);
 if (failed > 0) process.exit(1);
