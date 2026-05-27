@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 'use strict';
+'require baseclass';
 
+// dae DSL 解析 / 序列化（双环境：LuCI 浏览器 + Node.js 测试）
+// LuCI: L.require() 要求 factory 返回构造函数 → 用 baseclass.extend()
+// Node: tests 直接调 DaeParser._extractBlocks(...) → module.exports 是方法对象
 var DaeParser = {
 
     /**
@@ -271,5 +275,11 @@ var DaeParser = {
     }
 };
 
-if (typeof module !== 'undefined') module.exports = DaeParser;
-return DaeParser;
+if (typeof module !== 'undefined') {
+    module.exports = DaeParser;
+    return;
+}
+
+// LuCI 环境：baseclass.extend 把方法挂到 prototype 上，返回类构造函数
+// 调用方需要 new 一次拿到实例：var p = new DaeParserClass(); p.parse(text)
+return baseclass.extend(DaeParser);
