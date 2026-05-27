@@ -1,0 +1,173 @@
+name: Build luci-app-dae packages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'luci-app-dae/**'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+  release:
+    types: [created]
+
+# luci-app-dae 是架构无关包（LUCI_PKGARCH:=all），一次编译即可在所有 OpenWrt
+# 设备上安装。dae 二进制本身需要匹配目标 kernel 的 BTF 信息，不在此 workflow
+# 里编译——它由主固件 CI（ysuolmai/OpenWRT-CI）按 target 编译进固件。
+#
+# 我们用两套 SDK 产生两种格式：
+#   - ImmortalWrt 24.10 snapshot  → .apk  （新版固件用）
+#   - ImmortalWrt 23.05.4 release → .ipk  （老版固件用）
+#
+# dae 包未在 SDK feeds 中，所以临时 patch 掉 luci-app-dae Makefile 的 +dae
+# 依赖（不影响安装时的实际 dae 检测——dae 在固件里已就位）。
+
+jobs:
+  build-apk:
+    name: Build .apk (ImmortalWrt snapshot)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -yqq build-essential libncurses-dev zlib1g-dev \
+            gawk git gettext libssl-dev xsltproc rsync wget unzip python3 zstd
+
+      - name: Cache SDK
+        id: cache-sdk
+        uses: actions/cache@v4
+        with:
+          path: sdk
+          key: sdk-immortalwrt-snapshot-qualcommax-ipq60xx-v1
+
+      - name: Download SDK (ImmortalWrt snapshot qualcommax/ipq60xx)
+        if: steps.cache-sdk.outputs.cache-hit != 'true'
+        run: |
+          URL=https://downloads.immortalwrt.org/snapshots/targets/qualcommax/ipq60xx/immortalwrt-sdk-qualcommax-ipq60xx_gcc-14.3.0_musl.Linux-x86_64.tar.zst
+          wget -q "$URL" -O sdk.tar.zst
+          mkdir -p sdk
+          tar --use-compress-program=unzstd -xf sdk.tar.zst -C sdk --strip-components=1
+          rm sdk.tar.zst
+
+      - name: Setup feeds
+        working-directory: sdk
+        run: |
+          ./scripts/feeds update -a >/dev/null 2>&1
+          ./scripts/feeds install -a >/dev/null 2>&1
+
+      - name: Stage our luci-app-dae (override any feed copy)
+        working-directory: sdk
+        run: |
+          rm -rf package/feeds/luci/luci-app-dae feeds/luci/applications/luci-app-dae
+          cp -r ${{ github.workspace }}/luci-app-dae package/
+          # Patch out the +dae build-time dep (dae binary lives in firmware,
+          # not in this minimal SDK build context)
+          sed -i 's/LUCI_DEPENDS:=+dae/LUCI_DEPENDS:=/' package/luci-app-dae/Makefile
+
+      - name: Configure (.apk format)
+        working-directory: sdk
+        run: |
+          cat > .config <<'EOF'
+          CONFIG_USE_APK=y
+          # CONFIG_USE_OPKG is not set
+          CONFIG_PACKAGE_luci-app-dae=y
+          EOF
+          make defconfig
+
+      - name: Build luci-app-dae
+        working-directory: sdk
+        run: |
+          make package/luci-app-dae/{clean,compile} V=s -j$(nproc) 2>&1 | tail -80
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p artifacts
+          find sdk/bin -type f -name 'luci-app-dae*.apk' -exec cp -v {} artifacts/ \;
+          ls -la artifacts/
+          test -n "$(ls -A artifacts/)" || { echo "No .apk produced"; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: luci-app-dae-apk
+          path: artifacts/*.apk
+          if-no-files-found: error
+
+      - name: Attach to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.apk
+
+  build-ipk:
+    name: Build .ipk (ImmortalWrt 23.05.4)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -yqq build-essential libncurses-dev zlib1g-dev \
+            gawk git gettext libssl-dev xsltproc rsync wget unzip python3
+
+      - name: Cache SDK
+        id: cache-sdk
+        uses: actions/cache@v4
+        with:
+          path: sdk
+          key: sdk-immortalwrt-23.05.4-mediatek-filogic-v1
+
+      - name: Download SDK (ImmortalWrt 23.05.4 mediatek/filogic)
+        if: steps.cache-sdk.outputs.cache-hit != 'true'
+        run: |
+          URL=https://downloads.immortalwrt.org/releases/23.05.4/targets/mediatek/filogic/immortalwrt-sdk-23.05.4-mediatek-filogic_gcc-12.3.0_musl.Linux-x86_64.tar.xz
+          wget -q "$URL" -O sdk.tar.xz
+          mkdir -p sdk
+          tar -xf sdk.tar.xz -C sdk --strip-components=1
+          rm sdk.tar.xz
+
+      - name: Setup feeds
+        working-directory: sdk
+        run: |
+          ./scripts/feeds update -a >/dev/null 2>&1
+          ./scripts/feeds install -a >/dev/null 2>&1
+
+      - name: Stage our luci-app-dae (override any feed copy)
+        working-directory: sdk
+        run: |
+          rm -rf package/feeds/luci/luci-app-dae feeds/luci/applications/luci-app-dae
+          cp -r ${{ github.workspace }}/luci-app-dae package/
+          sed -i 's/LUCI_DEPENDS:=+dae/LUCI_DEPENDS:=/' package/luci-app-dae/Makefile
+
+      - name: Configure (.ipk format, default in 23.05)
+        working-directory: sdk
+        run: |
+          cat > .config <<'EOF'
+          CONFIG_PACKAGE_luci-app-dae=y
+          EOF
+          make defconfig
+
+      - name: Build luci-app-dae
+        working-directory: sdk
+        run: |
+          make package/luci-app-dae/{clean,compile} V=s -j$(nproc) 2>&1 | tail -80
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p artifacts
+          find sdk/bin -type f -name 'luci-app-dae*.ipk' -exec cp -v {} artifacts/ \;
+          ls -la artifacts/
+          test -n "$(ls -A artifacts/)" || { echo "No .ipk produced"; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: luci-app-dae-ipk
+          path: artifacts/*.ipk
+          if-no-files-found: error
+
+      - name: Attach to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.ipk
