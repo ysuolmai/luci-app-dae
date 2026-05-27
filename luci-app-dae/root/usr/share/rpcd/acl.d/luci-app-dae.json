@@ -6,7 +6,10 @@
 				"/etc/dae/config.dae": [ "read" ],
 				"/etc/dae/example.dae": [ "read" ],
 				"/var/log/dae/dae.log": [ "read" ],
-				"/etc/init.d/dae hot_reload": [ "exec" ]
+				"/tmp/dae-nodes-cache.json": [ "read" ],
+				"/etc/init.d/dae hot_reload": [ "exec" ],
+				"/usr/lib/luci-app-dae/list-nodes.sh fetch *": [ "exec" ],
+				"/usr/lib/luci-app-dae/list-nodes.sh refresh-all": [ "exec" ]
 			},
 			"ubus": {
 				"service": [ "list" ]
