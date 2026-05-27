@@ -454,6 +454,16 @@ return view.extend({
     _buildRoutingSection: function() {
         var self = this;
         var routing = ((self._config || {}).routing) || { rules: [], fallback: 'direct' };
+        // If no rules defined, seed the standard ones (private + cn IPs/domains → direct)
+        if ((!routing.rules || routing.rules.length === 0)) {
+            routing.rules = [
+                { condType: 'dip',    condValue: 'geoip:private', action: 'direct' },
+                { condType: 'dip',    condValue: 'geoip:cn',      action: 'direct' },
+                { condType: 'domain', condValue: 'geosite:cn',    action: 'direct' }
+            ];
+            self._config.routing = routing;
+        }
+        var fallbackDefault = (self._config.groups && self._config.groups[0] && self._config.groups[0].name) || 'direct';
         var section = E('div', { 'class': 'cbi-section', 'id': 'section-routing' });
         section.appendChild(E('h3', {}, _('Routing Rules')));
         var table = E('table', { 'class': 'table cbi-section-table', 'id': 'routing-table' }, [
@@ -472,7 +482,7 @@ return view.extend({
             E('td', { 'class': 'cbi-section-table-cell' }, E('strong', {}, _('Fallback'))),
             E('td', { 'class': 'cbi-section-table-cell' }, '—'),
             E('td', { 'class': 'cbi-section-table-cell' }, [
-                self._makeActionSelect('routing-fallback-action', routing.fallback || 'direct')
+                self._makeActionSelect('routing-fallback-action', routing.fallback || fallbackDefault)
             ]),
             E('td', { 'class': 'cbi-section-table-cell' }, '—')
         ]);
@@ -629,21 +639,20 @@ return view.extend({
 
     _makeActionSelect: function(id, selectedAction) {
         var self = this;
-        var config = self._config || {};
-        var options = ['direct', 'block'];
-        Object.keys(config.subscription || {}).forEach(function(n) {
-            if (options.indexOf(n) === -1) options.push(n);
-        });
-        Object.keys(config.node || {}).forEach(function(n) {
-            if (options.indexOf(n) === -1) options.push(n);
-        });
-        if (selectedAction && options.indexOf(selectedAction) === -1)
+        var groupNames = (self._config && self._config.groups || []).map(function(g) { return g.name; });
+        var options = ['direct', 'block'].concat(groupNames);
+        if (selectedAction && options.indexOf(selectedAction) === -1) {
+            // Preserve forward-compatibility for unknown actions
             options.push(selectedAction);
+        }
         var attrs = { 'class': 'cbi-input-select rule-action' };
         if (id) attrs['id'] = id;
         var sel = E('select', attrs);
-        options.forEach(function(o) {
-            sel.appendChild(E('option', { 'value': o, 'selected': o === selectedAction ? '' : null }, o));
+        options.forEach(function(opt) {
+            sel.appendChild(E('option', {
+                'value': opt,
+                'selected': opt === selectedAction ? '' : null
+            }, opt));
         });
         return sel;
     },
