@@ -193,10 +193,262 @@ return view.extend({
     },
 
     _buildGroupSection: function() {
-        return E('div', { 'class': 'cbi-section', 'id': 'section-group' }, [
-            E('h3', {}, _('Proxy Groups')),
-            E('p', {}, _('(implemented in Task 9)'))
+        var self = this;
+        var section = E('div', { 'class': 'cbi-section', 'id': 'section-group' });
+        section.appendChild(E('h3', {}, _('Proxy Groups')));
+
+        var container = E('div', { 'id': 'group-cards' });
+        var groups = (self._config && self._config.groups) || [];
+        groups.forEach(function(g, idx) {
+            container.appendChild(self._makeGroupCard(g, idx === 0));
+        });
+        section.appendChild(container);
+
+        section.appendChild(E('button', {
+            'class': 'btn cbi-button cbi-button-add',
+            'click': function() {
+                var groups = self._config.groups || [];
+                var newName = 'group' + (groups.length + 1);
+                var newGroup = {
+                    name: newName,
+                    filter: {
+                        subscriptions: Object.keys(self._config.subscription || {}),
+                        nodes: [],
+                        excludeKeywords: ['ExpireAt'],
+                        namePin: null
+                    },
+                    policy: 'min_moving_avg'
+                };
+                self._config.groups.push(newGroup);
+                document.getElementById('group-cards').appendChild(self._makeGroupCard(newGroup, false));
+            }
+        }, '+ ' + _('Add Group')));
+
+        return section;
+    },
+
+    _makeGroupCard: function(group, isFirst) {
+        var self = this;
+        var card = E('div', { 'class': 'cbi-section-node group-card', 'style': 'border:1px solid #ccc;padding:1em;margin-bottom:0.5em', 'data-group-name': group.name });
+
+        // Header row: name + delete button
+        var nameInput = E('input', {
+            'type': 'text',
+            'class': 'cbi-input-text group-name',
+            'value': group.name,
+            'style': 'width:14em',
+            'pattern': '[\\w]+',
+            'change': function(ev) {
+                var oldName = card.getAttribute('data-group-name');
+                var newName = ev.target.value;
+                card.setAttribute('data-group-name', newName);
+                self._onGroupRenamed(oldName, newName);
+            }
+        });
+
+        var delBtn = E('button', {
+            'class': 'btn cbi-button cbi-button-remove',
+            'style': 'float:right',
+            'disabled': isFirst ? '' : null,
+            'click': function() {
+                if (isFirst) return;
+                self._onGroupDeleted(card.getAttribute('data-group-name'));
+                card.parentNode.removeChild(card);
+            }
+        }, _('Delete Group'));
+
+        card.appendChild(E('div', { 'style': 'margin-bottom:0.5em' }, [
+            delBtn,
+            E('label', { 'style': 'font-weight:bold;margin-right:0.5em' }, _('Group name:')),
+            nameInput
+        ]));
+
+        // Subscriptions checkbox grid
+        var subKeys = Object.keys((self._config && self._config.subscription) || {});
+        var subBox = E('div', { 'class': 'group-subs', 'style': 'margin:0.5em 0' });
+        subBox.appendChild(E('label', { 'style': 'display:block;font-weight:bold' }, _('Use Subscriptions:')));
+        if (subKeys.length === 0) {
+            subBox.appendChild(E('em', {}, _('(no subscriptions defined)')));
+        } else {
+            subKeys.forEach(function(sub) {
+                var checked = (group.filter.subscriptions || []).indexOf(sub) !== -1;
+                subBox.appendChild(E('label', { 'style': 'margin-right:1em' }, [
+                    E('input', {
+                        'type': 'checkbox',
+                        'class': 'group-sub-cb',
+                        'value': sub,
+                        'checked': checked ? '' : null
+                    }),
+                    ' ' + sub
+                ]));
+            });
+        }
+        card.appendChild(subBox);
+
+        // Manual nodes checkbox grid
+        var nodeKeys = Object.keys((self._config && self._config.node) || {});
+        if (nodeKeys.length > 0) {
+            var nodeBox = E('div', { 'class': 'group-nodes', 'style': 'margin:0.5em 0' });
+            nodeBox.appendChild(E('label', { 'style': 'display:block;font-weight:bold' }, _('Use Manual Nodes:')));
+            nodeKeys.forEach(function(n) {
+                var checked = (group.filter.nodes || []).indexOf(n) !== -1;
+                nodeBox.appendChild(E('label', { 'style': 'margin-right:1em' }, [
+                    E('input', {
+                        'type': 'checkbox',
+                        'class': 'group-node-cb',
+                        'value': n,
+                        'checked': checked ? '' : null
+                    }),
+                    ' ' + n
+                ]));
+            });
+            card.appendChild(nodeBox);
+        }
+
+        // Exclude keywords input
+        card.appendChild(E('div', { 'style': 'margin:0.5em 0' }, [
+            E('label', { 'style': 'display:block;font-weight:bold' }, _('Exclude nodes whose name contains:')),
+            E('input', {
+                'type': 'text',
+                'class': 'cbi-input-text group-exclude',
+                'value': (group.filter.excludeKeywords || []).join(', '),
+                'placeholder': 'ExpireAt, 流量, 剩余',
+                'style': 'width:30em'
+            }),
+            E('br'),
+            E('em', { 'style': 'font-size:0.85em;color:#666' }, _('(comma-separated)'))
+        ]));
+
+        // Policy dropdown
+        var policySelect = E('select', { 'class': 'cbi-input-select group-policy' }, [
+            E('option', { 'value': 'min_moving_avg', 'selected': (group.policy === 'min_moving_avg' && !group.filter.namePin) ? '' : null }, _('Auto (fastest)')),
+            E('option', { 'value': 'random',         'selected': group.policy === 'random' ? '' : null }, _('Random')),
+            E('option', { 'value': '__pin',          'selected': group.filter.namePin ? '' : null },     _('Pin to one node'))
         ]);
+        policySelect.addEventListener('change', function() {
+            var pinRow = card.querySelector('.group-pin-row');
+            if (policySelect.value === '__pin') {
+                if (!pinRow) {
+                    pinRow = self._buildPinRow(group);
+                    pinRow.classList.add('group-pin-row');
+                    card.appendChild(pinRow);
+                }
+            } else if (pinRow) {
+                pinRow.parentNode.removeChild(pinRow);
+            }
+        });
+        card.appendChild(E('div', { 'style': 'margin:0.5em 0' }, [
+            E('label', { 'style': 'display:block;font-weight:bold' }, _('Policy:')),
+            policySelect
+        ]));
+
+        // Initial pin row if namePin is set
+        if (group.filter.namePin) {
+            var pinRow = self._buildPinRow(group);
+            pinRow.classList.add('group-pin-row');
+            card.appendChild(pinRow);
+        }
+
+        return card;
+    },
+
+    /**
+     * Build the "pin to node" row — a dropdown of all known nodes
+     * (from /tmp/dae-nodes-cache.json subscriptions + config.node manual).
+     */
+    _buildPinRow: function(group) {
+        var self = this;
+        var allNodes = self._allKnownNodeNames();
+        var sel = E('select', { 'class': 'cbi-input-select group-pin' });
+        if (allNodes.length === 0) {
+            sel.appendChild(E('option', { 'value': '' }, _('(no nodes — fetch in All Nodes tab first)')));
+        } else {
+            sel.appendChild(E('option', { 'value': '' }, _('-- choose --')));
+            allNodes.forEach(function(item) {
+                sel.appendChild(E('option', {
+                    'value': item.name,
+                    'selected': group.filter.namePin === item.name ? '' : null
+                }, item.name + ' (' + item.source + ')'));
+            });
+        }
+        return E('div', { 'style': 'margin:0.5em 0' }, [
+            E('label', { 'style': 'display:block;font-weight:bold' }, _('Pinned node:')),
+            sel
+        ]);
+    },
+
+    /**
+     * Return [{name, source}] of every node known to UI:
+     *  - subscription nodes from /tmp/dae-nodes-cache.json (if cache loaded)
+     *  - manual nodes from this._config.node
+     */
+    _allKnownNodeNames: function() {
+        var self = this;
+        var out = [];
+        var cache = self._nodesCache || {};
+        var subs = cache.subscriptions || {};
+        for (var subName in subs) {
+            (subs[subName] || []).forEach(function(n) {
+                out.push({ name: n.name, source: subName });
+            });
+        }
+        Object.keys(self._config.node || {}).forEach(function(n) {
+            out.push({ name: n, source: _('manual') });
+        });
+        return out;
+    },
+
+    /**
+     * When a group is renamed, propagate to routing rules referencing the old name.
+     */
+    _onGroupRenamed: function(oldName, newName) {
+        var self = this;
+        var routing = self._config.routing || { rules: [], fallback: 'direct' };
+        if (routing.fallback === oldName) routing.fallback = newName;
+        (routing.rules || []).forEach(function(r) {
+            if (r.action === oldName) r.action = newName;
+        });
+        // Also update the in-memory groups array
+        var g = (self._config.groups || []).filter(function(g){ return g.name === oldName; })[0];
+        if (g) g.name = newName;
+        // Refresh the routing table dropdowns
+        self._refreshRoutingActionOptions();
+    },
+
+    /**
+     * When a group is deleted, point any routing rule referencing it to 'direct'.
+     */
+    _onGroupDeleted: function(name) {
+        var self = this;
+        self._config.groups = (self._config.groups || []).filter(function(g){ return g.name !== name; });
+        var routing = self._config.routing || { rules: [], fallback: 'direct' };
+        if (routing.fallback === name) routing.fallback = 'direct';
+        (routing.rules || []).forEach(function(r) {
+            if (r.action === name) r.action = 'direct';
+        });
+        self._refreshRoutingActionOptions();
+        ui.addNotification(null, E('p', _('Group "%s" deleted. Routing rules referencing it have been reset to direct.').replace('%s', name)));
+    },
+
+    /**
+     * Rebuild all <select.rule-action> options in the routing table to match
+     * current self._config.groups.
+     */
+    _refreshRoutingActionOptions: function() {
+        var self = this;
+        var groupNames = (self._config.groups || []).map(function(g) { return g.name; });
+        var allActions = ['direct', 'block'].concat(groupNames);
+        document.querySelectorAll('.rule-action').forEach(function(sel) {
+            var current = sel.value;
+            sel.innerHTML = '';
+            allActions.forEach(function(a) {
+                sel.appendChild(E('option', { 'value': a, 'selected': a === current ? '' : null }, a));
+            });
+            // If current value no longer in options, add it (rare; deleted group still referenced)
+            if (allActions.indexOf(current) === -1 && current) {
+                sel.appendChild(E('option', { 'value': current, 'selected': '' }, current));
+            }
+        });
     },
 
     _buildRoutingSection: function() {
