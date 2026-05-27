@@ -28,8 +28,10 @@ return view.extend({
             self._parser = results[1];
             try {
                 self._config = self._parser.parse(content);
+                self._parser.ensureDefaultGroup(self._config);
             } catch(e) {
                 self._config = self._parser.parse('');
+                self._parser.ensureDefaultGroup(self._config);
                 self._activeTab = 'text';
                 ui.addNotification(null, E('p', _('Config parse error — opened in text mode: ') + e.message));
             }
@@ -44,18 +46,19 @@ return view.extend({
         var self = this;
         var container = E('div', { 'class': 'dae-config-container' });
 
-        // ── Tab bar ──────────────────────────────────────────────────────────
-        container.appendChild(E('ul', { 'class': 'cbi-tabmenu' }, [
-            E('li', {
-                'id': 'tab-btn-form',
-                'class': 'cbi-tab' + (self._activeTab === 'form' ? ' cbi-tab-active' : ''),
-                'click': function() { self._switchTab('form'); }
-            }, _('Form')),
-            E('li', {
-                'id': 'tab-btn-text',
-                'class': 'cbi-tab' + (self._activeTab === 'text' ? ' cbi-tab-active' : ''),
-                'click': function() { self._switchTab('text'); }
-            }, _('Text'))
+        // ── Tab bar — use button styling so it actually looks like clickable buttons ──
+        var tabBtn = function(id, label, active) {
+            return E('button', {
+                'id': 'tab-btn-' + id,
+                'class': active ? 'btn cbi-button cbi-button-action' : 'btn cbi-button',
+                'style': 'margin-right: 0.5em',
+                'click': function() { self._switchTab(id); }
+            }, label);
+        };
+        container.appendChild(E('div', { 'class': 'cbi-tabcontainer', 'style': 'margin-bottom:1em' }, [
+            tabBtn('form',  _('Form'),       self._activeTab === 'form'),
+            tabBtn('nodes', _('All Nodes'),  self._activeTab === 'nodes'),
+            tabBtn('text',  _('Text'),       self._activeTab === 'text')
         ]));
 
         // ── Form pane ─────────────────────────────────────────────────────────
@@ -63,6 +66,12 @@ return view.extend({
         formPane.id = 'pane-form';
         formPane.style.display = self._activeTab === 'form' ? '' : 'none';
         container.appendChild(formPane);
+
+        // ── All Nodes pane (Task 11 fills this in) ────────────────────────────
+        var nodesPane = self._buildNodesPane();
+        nodesPane.id = 'pane-nodes';
+        nodesPane.style.display = self._activeTab === 'nodes' ? '' : 'none';
+        container.appendChild(nodesPane);
 
         // ── Text pane ─────────────────────────────────────────────────────────
         container.appendChild(E('div', {
@@ -84,8 +93,8 @@ return view.extend({
         var self = this;
         if (tab === self._activeTab) return;
 
-        if (tab === 'text') {
-            // Form → Text: serialize current form data
+        // Form → Text: serialize current form data
+        if (self._activeTab === 'form' && tab === 'text') {
             try {
                 var text = self._parser.serialize(self._getFormData());
                 document.getElementById('dae-raw-text').value = text;
@@ -93,23 +102,30 @@ return view.extend({
                 ui.addNotification(null, E('p', _('Failed to serialize form: ') + e.message));
                 return;
             }
-        } else {
-            // Text → Form: parse text and rebuild form
+        }
+        // Text → Form: parse text into config + refresh form
+        if (self._activeTab === 'text' && tab === 'form') {
             var text = document.getElementById('dae-raw-text').value;
             try {
                 self._config = self._parser.parse(text);
+                self._parser.ensureDefaultGroup(self._config);
                 self._refreshForm();
             } catch(e) {
                 ui.addNotification(null, E('p', _('Config text has errors. Please fix before switching to form mode.')));
                 return;
             }
         }
+        // For nodes tab: re-render from cache (Task 11 implements _refreshNodes)
+        if (tab === 'nodes') {
+            self._refreshNodes();
+        }
 
         self._activeTab = tab;
-        document.getElementById('pane-form').style.display = tab === 'form' ? '' : 'none';
-        document.getElementById('pane-text').style.display = tab === 'text'  ? '' : 'none';
-        document.getElementById('tab-btn-form').classList.toggle('cbi-tab-active', tab === 'form');
-        document.getElementById('tab-btn-text').classList.toggle('cbi-tab-active', tab === 'text');
+        ['form','nodes','text'].forEach(function(t) {
+            document.getElementById('pane-' + t).style.display = (t === tab) ? '' : 'none';
+            var btn = document.getElementById('tab-btn-' + t);
+            btn.className = (t === tab) ? 'btn cbi-button cbi-button-action' : 'btn cbi-button';
+        });
     },
 
     // ── Stubs implemented in Tasks 5–7 ──────────────────────────────────────
@@ -560,6 +576,13 @@ return view.extend({
                 else if (el.tagName === 'SELECT') el.value  = val;
                 else                             el.value   = val;
             });
+    },
+
+    _buildNodesPane: function() {
+        return E('div', { 'class': 'cbi-section' }, _('(node list — implemented in Task 11)'));
+    },
+    _refreshNodes: function() {
+        // implemented in Task 11
     },
 
     // ── Save ─────────────────────────────────────────────────────────────────
