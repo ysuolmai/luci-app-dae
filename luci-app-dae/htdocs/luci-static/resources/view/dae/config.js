@@ -23,10 +23,9 @@ return view.extend({
             L.require('view/dae/dae-parser')
         ]).then(function(results) {
             var content = results[0] || '';
-            // L.require returns the DaeParser class (baseclass.extend result);
-            // instantiate to get an object with the parse/serialize methods on prototype
-            var DaeParserClass = results[1];
-            self._parser = new DaeParserClass();
+            // L.require() already instantiates the class and returns the
+            // singleton instance — don't `new` it again.
+            self._parser = results[1];
             try {
                 self._config = self._parser.parse(content);
             } catch(e) {
