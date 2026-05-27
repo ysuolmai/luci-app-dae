@@ -133,7 +133,7 @@ return view.extend({
         var self = this;
         var pane = E('div', { 'class': 'cbi-section' });
         pane.appendChild(self._buildSubscriptionSection());
-        pane.appendChild(self._buildNodeSection());
+        pane.appendChild(self._buildGroupSection());
         pane.appendChild(self._buildRoutingSection());
         pane.appendChild(self._buildDNSSection());
         pane.appendChild(self._buildGlobalSection());
@@ -192,54 +192,11 @@ return view.extend({
         return row;
     },
 
-    _buildNodeSection: function() {
-        var self = this;
-        var nodes = (self._config || {}).node || {};
-        var section = E('div', { 'class': 'cbi-section', 'id': 'section-node' });
-        var titleDiv = E('div', {
-            'style': 'cursor:pointer;user-select:none',
-            'click': function() {
-                var body = document.getElementById('node-section-body');
-                body.style.display = body.style.display === 'none' ? '' : 'none';
-            }
-        }, [E('h3', {}, '▶ ' + _('Nodes (Manual)'))]);
-        section.appendChild(titleDiv);
-        var body = E('div', { 'id': 'node-section-body', 'style': 'display:none' });
-        var table = E('table', { 'class': 'table cbi-section-table', 'id': 'node-table' }, [
-            E('tr', { 'class': 'cbi-section-table-titles' }, [
-                E('th', { 'class': 'cbi-section-table-cell', 'style': 'width:20%' }, _('Name')),
-                E('th', { 'class': 'cbi-section-table-cell' }, _('Node URI')),
-                E('th', { 'class': 'cbi-section-table-cell', 'style': 'width:80px' }, _('Action'))
-            ])
+    _buildGroupSection: function() {
+        return E('div', { 'class': 'cbi-section', 'id': 'section-group' }, [
+            E('h3', {}, _('Proxy Groups')),
+            E('p', {}, _('(implemented in Task 9)'))
         ]);
-        Object.keys(nodes).forEach(function(name) {
-            table.appendChild(self._makeNodeRow(name, nodes[name]));
-        });
-        body.appendChild(table);
-        body.appendChild(E('button', {
-            'class': 'btn cbi-button cbi-button-add',
-            'click': function() {
-                document.getElementById('node-table').appendChild(self._makeNodeRow('', ''));
-            }
-        }, '+ ' + _('Add Node')));
-        section.appendChild(body);
-        return section;
-    },
-
-    _makeNodeRow: function(name, uri) {
-        var row = E('tr', { 'class': 'cbi-section-table-row node-row' }, [
-            E('td', { 'class': 'cbi-section-table-cell' }, [
-                E('input', { 'type': 'text', 'class': 'cbi-input-text node-name', 'value': name, 'placeholder': 'node1' })
-            ]),
-            E('td', { 'class': 'cbi-section-table-cell' }, [
-                E('input', { 'type': 'text', 'class': 'cbi-input-text node-uri', 'value': uri, 'placeholder': 'ss://...' })
-            ]),
-            E('td', { 'class': 'cbi-section-table-cell' }, [
-                E('button', { 'class': 'btn cbi-button cbi-button-remove',
-                    'click': function() { row.parentNode.removeChild(row); } }, _('Delete'))
-            ])
-        ]);
-        return row;
     },
 
     _buildRoutingSection: function() {
@@ -535,13 +492,6 @@ return view.extend({
         subTable.querySelectorAll('.sub-row').forEach(function(r) { r.parentNode.removeChild(r); });
         Object.keys(config.subscription || {}).forEach(function(n) {
             subTable.appendChild(self._makeSubRow(n, config.subscription[n]));
-        });
-
-        // Nodes
-        var nodeTable = document.getElementById('node-table');
-        nodeTable.querySelectorAll('.node-row').forEach(function(r) { r.parentNode.removeChild(r); });
-        Object.keys(config.node || {}).forEach(function(n) {
-            nodeTable.appendChild(self._makeNodeRow(n, config.node[n]));
         });
 
         // Routing rules
