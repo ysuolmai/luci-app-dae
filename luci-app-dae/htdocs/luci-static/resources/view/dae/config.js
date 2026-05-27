@@ -689,6 +689,7 @@ return view.extend({
         var self = this;
         var config = {
             global: {}, subscription: {}, node: {},
+            groups: [],
             routing: { rules: [], fallback: 'direct' },
             dns: {
                 upstream: {}, domestic: '', foreign: '',
@@ -713,11 +714,40 @@ return view.extend({
             if (n && u) config.subscription[n] = u;
         });
 
-        // Nodes
-        document.querySelectorAll('#node-table .node-row').forEach(function(row) {
-            var n = row.querySelector('.node-name').value.trim();
-            var u = row.querySelector('.node-uri').value.trim();
-            if (n && u) config.node[n] = u;
+        // Manual nodes — read from in-memory self._config.node
+        // (kept up-to-date by the All Nodes tab's add/delete operations)
+        config.node = Object.assign({}, self._config.node || {});
+
+        // Groups
+        document.querySelectorAll('#group-cards .group-card').forEach(function(card) {
+            var name = card.querySelector('.group-name').value.trim();
+            if (!name) return;
+            var subs = [];
+            card.querySelectorAll('.group-sub-cb').forEach(function(cb) {
+                if (cb.checked) subs.push(cb.value);
+            });
+            var nodes = [];
+            card.querySelectorAll('.group-node-cb').forEach(function(cb) {
+                if (cb.checked) nodes.push(cb.value);
+            });
+            var excludeStr = (card.querySelector('.group-exclude') || {}).value || '';
+            var excludeKws = excludeStr.split(',').map(function(s){return s.trim();}).filter(Boolean);
+            var policySelEl = card.querySelector('.group-policy');
+            var policy = 'min_moving_avg';
+            var namePin = null;
+            if (policySelEl) {
+                if (policySelEl.value === '__pin') {
+                    var pinEl = card.querySelector('.group-pin');
+                    if (pinEl) namePin = pinEl.value || null;
+                } else {
+                    policy = policySelEl.value;
+                }
+            }
+            config.groups.push({
+                name: name,
+                filter: { subscriptions: subs, nodes: nodes, excludeKeywords: excludeKws, namePin: namePin },
+                policy: namePin ? 'min_moving_avg' : policy
+            });
         });
 
         // Routing rules
@@ -752,28 +782,44 @@ return view.extend({
 
         // Subscriptions
         var subTable = document.getElementById('sub-table');
-        subTable.querySelectorAll('.sub-row').forEach(function(r) { r.parentNode.removeChild(r); });
-        Object.keys(config.subscription || {}).forEach(function(n) {
-            subTable.appendChild(self._makeSubRow(n, config.subscription[n]));
-        });
+        if (subTable) {
+            subTable.querySelectorAll('.sub-row').forEach(function(r) { r.parentNode.removeChild(r); });
+            Object.keys(config.subscription || {}).forEach(function(n) {
+                subTable.appendChild(self._makeSubRow(n, config.subscription[n]));
+            });
+        }
+
+        // Groups — full rebuild
+        var groupContainer = document.getElementById('group-cards');
+        if (groupContainer) {
+            groupContainer.innerHTML = '';
+            (config.groups || []).forEach(function(g, idx) {
+                groupContainer.appendChild(self._makeGroupCard(g, idx === 0));
+            });
+        }
 
         // Routing rules
         var routingTable = document.getElementById('routing-table');
-        routingTable.querySelectorAll('.routing-row').forEach(function(r) { r.parentNode.removeChild(r); });
-        var fbRow = document.getElementById('routing-fallback-row');
-        ((config.routing || {}).rules || []).forEach(function(rule) {
-            routingTable.insertBefore(
-                self._makeRoutingRow(rule.condType, rule.condValue, rule.action), fbRow);
-        });
-        var fbEl = document.getElementById('routing-fallback-action');
-        if (fbEl && config.routing) fbEl.value = config.routing.fallback || 'direct';
+        if (routingTable) {
+            routingTable.querySelectorAll('.routing-row').forEach(function(r) { r.parentNode.removeChild(r); });
+            var fbRow = document.getElementById('routing-fallback-row');
+            ((config.routing || {}).rules || []).forEach(function(rule) {
+                routingTable.insertBefore(
+                    self._makeRoutingRow(rule.condType, rule.condValue, rule.action), fbRow);
+            });
+            self._refreshRoutingActionOptions();
+            var fbEl = document.getElementById('routing-fallback-action');
+            if (fbEl && config.routing) fbEl.value = config.routing.fallback || 'direct';
+        }
 
         // DNS upstream
         var dnsTable = document.getElementById('dns-upstream-table');
-        dnsTable.querySelectorAll('.dns-upstream-row').forEach(function(r) { r.parentNode.removeChild(r); });
-        Object.keys((config.dns || {}).upstream || {}).forEach(function(n) {
-            dnsTable.appendChild(self._makeDNSUpstreamRow(n, config.dns.upstream[n]));
-        });
+        if (dnsTable) {
+            dnsTable.querySelectorAll('.dns-upstream-row').forEach(function(r) { r.parentNode.removeChild(r); });
+            Object.keys((config.dns || {}).upstream || {}).forEach(function(n) {
+                dnsTable.appendChild(self._makeDNSUpstreamRow(n, config.dns.upstream[n]));
+            });
+        }
         var domEl = document.getElementById('dns-domestic');
         var forEl = document.getElementById('dns-foreign');
         if (domEl && config.dns) domEl.value = config.dns.domestic || '';
