@@ -422,3 +422,7 @@ msgstr ""
 #: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
 msgid "Failed to serialize: "
 msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "LAN Interface (optional)"
+msgstr ""

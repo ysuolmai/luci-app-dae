@@ -429,3 +429,7 @@ msgstr "刷新失败："
 #: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
 msgid "Failed to serialize: "
 msgstr "序列化失败："
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "LAN Interface (optional)"
+msgstr "LAN 接口（可选）"

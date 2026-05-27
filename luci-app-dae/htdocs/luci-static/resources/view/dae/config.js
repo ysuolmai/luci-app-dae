@@ -554,20 +554,30 @@ return view.extend({
         var self = this;
         var global_ = (self._config || {}).global || {};
         var section = E('div', { 'class': 'cbi-section', 'id': 'section-global' });
+        // Show heading + small hint that defaults are pre-applied.
+        // Click toggles expand/collapse; default expanded so users see the defaults.
+        var collapsed = false;
+        var heading = E('h3', {}, _('Global Settings'));
         section.appendChild(E('div', {
             'style': 'cursor:pointer;user-select:none',
             'click': function() {
                 var body = document.getElementById('global-section-body');
-                body.style.display = body.style.display === 'none' ? '' : 'none';
+                collapsed = !collapsed;
+                body.style.display = collapsed ? 'none' : '';
+                heading.textContent = (collapsed ? '▶ ' : '▼ ') + _('Global Settings');
             }
-        }, [E('h3', {}, '▶ ' + _('Global Settings'))]));
-        var body = E('div', { 'id': 'global-section-body', 'style': 'display:none' });
+        }, [heading]));
+        // Set initial arrow
+        heading.textContent = '▼ ' + _('Global Settings');
+        var body = E('div', { 'id': 'global-section-body' });
+        // Field names use dae's actual config syntax (underscores, not hyphens).
+        // Defaults match dae example.dae conventions.
         var fields = [
-            { key: 'log-level',                    label: _('Log Level'),                    type: 'select',   opts: ['error','warn','info','debug','trace'], def: 'info' },
-            { key: 'lan-interface',                label: _('LAN Interface'),                type: 'text',     def: 'br-lan' },
-            { key: 'wan-interface',                label: _('WAN Interface'),                type: 'text',     def: 'eth1'   },
-            { key: 'allow-insecure',               label: _('Allow Insecure'),               type: 'checkbox', def: 'false'  },
-            { key: 'auto-config-kernel-parameter', label: _('Auto Config Kernel Parameter'), type: 'checkbox', def: 'true'   }
+            { key: 'log_level',                    label: _('Log Level'),                    type: 'select',   opts: ['error','warn','info','debug','trace'], def: 'info' },
+            { key: 'wan_interface',                label: _('WAN Interface'),                type: 'text',     def: 'auto'   },
+            { key: 'lan_interface',                label: _('LAN Interface (optional)'),     type: 'text',     def: ''       },
+            { key: 'allow_insecure',               label: _('Allow Insecure'),               type: 'checkbox', def: 'false'  },
+            { key: 'auto_config_kernel_parameter', label: _('Auto Config Kernel Parameter'), type: 'checkbox', def: 'true'   }
         ];
         fields.forEach(function(f) {
             var val = global_[f.key] !== undefined ? global_[f.key] : f.def;
@@ -699,7 +709,7 @@ return view.extend({
         };
 
         // Global
-        ['log-level','lan-interface','wan-interface','allow-insecure','auto-config-kernel-parameter']
+        ['log_level','wan_interface','lan_interface','allow_insecure','auto_config_kernel_parameter']
             .forEach(function(key) {
                 var el = document.getElementById('global-' + key);
                 if (!el) return;
@@ -826,7 +836,7 @@ return view.extend({
         if (forEl && config.dns) forEl.value = config.dns.foreign  || '';
 
         // Global
-        ['log-level','lan-interface','wan-interface','allow-insecure','auto-config-kernel-parameter']
+        ['log_level','wan_interface','lan_interface','allow_insecure','auto_config_kernel_parameter']
             .forEach(function(key) {
                 var el = document.getElementById('global-' + key);
                 if (!el) return;
