@@ -266,3 +266,159 @@ msgstr ""
 #: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
 msgid "Config parse error — opened in text mode: "
 msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "All Nodes"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Proxy Groups"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Add Group"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Delete Group"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Group name:"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Use Subscriptions:"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Use Manual Nodes:"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "(no subscriptions defined)"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Exclude nodes whose name contains:"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "(comma-separated)"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Policy:"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Auto (fastest)"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Random"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Pin to one node"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Pinned node:"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "-- choose --"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "(no nodes — fetch in All Nodes tab first)"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "manual"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Group \"%s\" deleted. Routing rules referencing it have been reset to direct."
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Refresh Subscription Nodes"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Filter by source:"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "All sources"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Manual"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Protocol"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Server:Port"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Source"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "No nodes yet. Click \"Refresh Subscription Nodes\" or \"Add Manual Node\"."
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Add Manual Node"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Enter a name and the node URI:"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Name:"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "URI:"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Cancel"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Add"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Name must be letters/digits/underscore only"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "URI must start with scheme://"
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Fetching subscriptions… this may take a few seconds."
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Nodes refreshed."
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Refresh failed: "
+msgstr ""
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Failed to serialize: "
+msgstr ""

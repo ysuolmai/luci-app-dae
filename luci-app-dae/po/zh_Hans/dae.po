@@ -273,3 +273,159 @@ msgstr "删除"
 #: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
 msgid "Config parse error — opened in text mode: "
 msgstr "配置解析失败，已切换到文本模式："
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "All Nodes"
+msgstr "所有节点"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Proxy Groups"
+msgstr "代理组"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Add Group"
+msgstr "添加分流组"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Delete Group"
+msgstr "删除此组"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Group name:"
+msgstr "组名："
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Use Subscriptions:"
+msgstr "使用订阅："
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Use Manual Nodes:"
+msgstr "使用手动节点："
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "(no subscriptions defined)"
+msgstr "（还没有订阅）"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Exclude nodes whose name contains:"
+msgstr "排除名字包含以下关键字的节点："
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "(comma-separated)"
+msgstr "（逗号分隔）"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Policy:"
+msgstr "策略："
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Auto (fastest)"
+msgstr "自动选最快"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Random"
+msgstr "随机"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Pin to one node"
+msgstr "手动选一个节点"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Pinned node:"
+msgstr "指定节点："
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "-- choose --"
+msgstr "-- 请选择 --"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "(no nodes — fetch in All Nodes tab first)"
+msgstr "（暂无节点，请先去【所有节点】tab 点刷新）"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "manual"
+msgstr "手动"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Group \"%s\" deleted. Routing rules referencing it have been reset to direct."
+msgstr "组 \"%s\" 已删除。引用它的路由规则已重置为 direct。"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Refresh Subscription Nodes"
+msgstr "刷新订阅节点"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Filter by source:"
+msgstr "按来源筛选："
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "All sources"
+msgstr "全部"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Manual"
+msgstr "手动"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Protocol"
+msgstr "协议"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Server:Port"
+msgstr "服务器:端口"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Source"
+msgstr "来源"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "No nodes yet. Click \"Refresh Subscription Nodes\" or \"Add Manual Node\"."
+msgstr "暂无节点。点【刷新订阅节点】或【+ 添加手动节点】。"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Add Manual Node"
+msgstr "+ 添加手动节点"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Enter a name and the node URI:"
+msgstr "输入节点名称和 URI："
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Name:"
+msgstr "名称："
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "URI:"
+msgstr "URI："
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Cancel"
+msgstr "取消"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Add"
+msgstr "添加"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Name must be letters/digits/underscore only"
+msgstr "名称只允许字母、数字、下划线"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "URI must start with scheme://"
+msgstr "URI 必须以 scheme:// 开头"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Fetching subscriptions… this may take a few seconds."
+msgstr "正在拉取订阅…可能需要几秒钟。"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Nodes refreshed."
+msgstr "节点已刷新。"
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Refresh failed: "
+msgstr "刷新失败："
+
+#: applications/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js
+msgid "Failed to serialize: "
+msgstr "序列化失败："
