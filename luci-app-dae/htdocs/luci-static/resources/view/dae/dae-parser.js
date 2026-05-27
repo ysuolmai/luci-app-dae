@@ -171,6 +171,28 @@ var DaeParser = {
     },
 
     /**
+     * If config.groups is empty, add a default group named `name`
+     * (default 'proxy'), with all current subscription names selected and
+     * 'ExpireAt' as the exclude keyword. Policy defaults to min_moving_avg.
+     * Mutates config in place.
+     */
+    ensureDefaultGroup: function(config, name) {
+        if (!config || !Array.isArray(config.groups)) return;
+        if (config.groups.length > 0) return;
+        name = name || 'proxy';
+        config.groups.push({
+            name: name,
+            filter: {
+                subscriptions: Object.keys(config.subscription || {}),
+                nodes: [],
+                excludeKeywords: ['ExpireAt'],
+                namePin: null
+            },
+            policy: 'min_moving_avg'
+        });
+    },
+
+    /**
      * Parse full dae config text → DaeConfig object.
      */
     parse: function(text) {
@@ -178,6 +200,7 @@ var DaeParser = {
         var blocks = self._extractBlocks(text);
         var config = {
             global: {}, subscription: {}, node: {},
+            groups: [],                                                  // ← ADD THIS LINE
             routing: { rules: [], fallback: 'direct' },
             dns: { upstream: {}, domestic: '', foreign: '', rawRouting: '' },
             rawOther: ''

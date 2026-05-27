@@ -286,6 +286,45 @@ test('serialize skips empty blocks', function() {
     assert.ok(!s.includes('node {'));
 });
 
+// ---- groups in DaeConfig ----
+console.log('\ngroups field:');
+
+test('parse() returns empty groups array when no group block', function() {
+    var c = DaeParser.parse("subscription {\n  my_sub: 'https://x'\n}\nrouting {\n  fallback: direct\n}");
+    assert.ok(Array.isArray(c.groups), 'groups should be an array');
+    assert.strictEqual(c.groups.length, 0);
+});
+
+test('parse() returns empty groups array for empty input', function() {
+    var c = DaeParser.parse('');
+    assert.deepStrictEqual(c.groups, []);
+});
+
+// ---- ensureDefaultGroup ----
+console.log('\nensureDefaultGroup:');
+
+test('adds a default group when groups is empty', function() {
+    var c = DaeParser.parse("subscription {\n  my_sub: 'https://x'\n}\nrouting {\n  fallback: proxy\n}");
+    DaeParser.ensureDefaultGroup(c);
+    assert.strictEqual(c.groups.length, 1);
+    assert.strictEqual(c.groups[0].name, 'proxy');
+    assert.deepStrictEqual(c.groups[0].filter.subscriptions, ['my_sub']);
+    assert.deepStrictEqual(c.groups[0].filter.excludeKeywords, ['ExpireAt']);
+    assert.strictEqual(c.groups[0].policy, 'min_moving_avg');
+});
+
+test('does nothing when groups already populated', function() {
+    var c = {
+        global: {}, subscription: {}, node: {}, groups: [{name: 'mygroup', filter: {subscriptions:[], nodes:[], excludeKeywords:[], namePin:null}, policy: 'random'}],
+        routing: {rules:[], fallback:'direct'},
+        dns: {upstream:{}, domestic:'', foreign:'', rawRouting:''},
+        rawOther: ''
+    };
+    DaeParser.ensureDefaultGroup(c);
+    assert.strictEqual(c.groups.length, 1);
+    assert.strictEqual(c.groups[0].name, 'mygroup');
+});
+
 console.log('\n--- Results ---');
 console.log('Passed: ' + passed + '  Failed: ' + failed);
 if (failed > 0) process.exit(1);
