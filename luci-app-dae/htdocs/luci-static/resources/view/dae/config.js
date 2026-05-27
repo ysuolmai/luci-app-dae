@@ -1030,15 +1030,29 @@ return view.extend({
                 ui.addNotification(null, E('p', _('Failed to serialize form: ') + e.message));
                 return Promise.resolve();
             }
-        } else {
+        } else if (self._activeTab === 'text') {
             text = document.getElementById('dae-raw-text').value;
+        } else {
+            // Saving while on All Nodes tab: serialize from in-memory _config
+            try { text = self._parser.serialize(self._config); }
+            catch(e) {
+                ui.addNotification(null, E('p', _('Failed to serialize: ') + e.message));
+                return Promise.resolve();
+            }
         }
+
         return fs.write('/etc/dae/config.dae', text, 384)
             .then(function() {
                 return L.resolveDefault(fs.exec_direct('/etc/init.d/dae', ['hot_reload']), null);
             })
             .then(function() {
                 ui.addNotification(null, E('p', _('Configuration saved and dae reloaded.')));
+                // Fire-and-forget: refresh node cache in background
+                L.resolveDefault(fs.exec_direct('/usr/lib/luci-app-dae/list-nodes.sh', ['refresh-all']), null)
+                    .then(function() {
+                        return self._loadNodesCache && self._loadNodesCache();
+                    })
+                    .catch(function() { /* silent */ });
             })
             .catch(function(e) {
                 ui.addNotification(null, E('p', e.message));
