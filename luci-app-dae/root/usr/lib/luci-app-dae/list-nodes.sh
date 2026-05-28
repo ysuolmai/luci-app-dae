@@ -206,7 +206,146 @@ case "$cmd" in
         parse_content "$content"
         ;;
     refresh-all)
+        # Strategy:
+        #   1. If dae is running, scrape /var/log/dae/dae.log for the group-and-
+        #      node-list block it prints at startup. dae has already fetched +
+        #      validated the subscriptions, and trying to wget them ourselves
+        #      while dae is running gets intercepted by dae's eBPF transparent
+        #      proxy (EPERM or TLS errors). The dae log is the authoritative
+        #      list of nodes-actually-in-use.
+        #   2. If dae isn't running OR the log has no group block, fall back to
+        #      wget+base64 mode per subscription (works when dae is stopped).
+        #
+        # Output schema is unchanged: { updated_at, subscriptions: { name: [
+        #   {name, protocol, server, port}, ... ] } }
+        # When sourced from the dae log we only know node names, so protocol/
+        # server/port come out as empty strings.
+
         config=/etc/dae/config.dae
+        logfile=/var/log/dae/dae.log
+
+        # ----- Path 1: dae log scrape -----
+        if [ -f "$logfile" ] && /etc/init.d/dae status 2>/dev/null | grep -q running; then
+            # Extract { group_name → [node_names...] } from the latest startup block.
+            # dae prints:
+            #   level=info msg="Group \"X\" node list:"
+            #   level=info msg="\t<nodename>"      (one per node, tab-prefixed)
+            #   level=info msg="\t<Empty>"         (if no nodes)
+            #   level=info ...                     (other lines end the list)
+            #
+            # We bucket nodes per group, then map each group to its filter's
+            # subtag() target subscription (so the UI table shows source = sub
+            # name, not group name).
+            # dae log line is literally:
+            #   level=info msg="<groupname>... node list:"      ← header
+            #   level=info msg="<TAB><nodename>"                ← per node
+            #   level=info <anything else>                      ← list ends
+            # Use index()+substr() instead of regex because busybox awk does
+            # not reliably interpret \t inside regex patterns.
+            tmpgroups=$(mktemp)
+            awk '
+                {
+                    # detect header: contains literal `node list:"`
+                    if (index($0, "node list:\"") > 0) {
+                        # group name is between the first `Group "` and `"`
+                        s = $0
+                        i = index(s, "Group \"")
+                        if (i > 0) {
+                            rest = substr(s, i + 7)
+                            j = index(rest, "\"")
+                            if (j > 0) {
+                                cur_group = substr(rest, 1, j - 1)
+                                in_list = 1
+                                next
+                            }
+                        }
+                    }
+                    if (in_list) {
+                        # A node line is specifically:  ...msg="<TAB><name>"
+                        # Other info lines (Group selects dialer ...) also contain
+                        # msg="..." but without a leading TAB, so we filter on that.
+                        i = index($0, "msg=\"")
+                        # char immediately after the opening quote is at position i+5
+                        if (i > 0 && substr($0, i + 5, 1) == "\t") {
+                            tail = substr($0, i + 6)
+                            j = index(tail, "\"")
+                            if (j > 0) {
+                                name = substr(tail, 1, j - 1)
+                                if (name != "<Empty>") print cur_group "\t" name
+                                next
+                            }
+                        }
+                        # any non-matching line ends the list block
+                        in_list = 0
+                    }
+                }
+            ' "$logfile" | sort -u > "$tmpgroups"
+
+            # Build group → subscription mapping from config.dae
+            # Match lines like:    filter: subtag(sub_a, sub_b)
+            # NOTE: busybox awk does not accept '{' inside regex (treats it as
+            # interval-quantifier opening), so we use field-position checks.
+            tmpmap=$(mktemp)
+            awk '
+                $1 == "group" && $2 == "{" { in_group_block=1; next }
+                in_group_block && NF == 2 && $2 == "{" { cur = $1; next }
+                in_group_block && /filter:/ && /subtag\(/ {
+                    s = $0
+                    sub(/.*subtag\(/, "", s)
+                    sub(/\).*/, "", s)
+                    gsub(/[[:space:]]/, "", s)
+                    if (cur != "") print cur "\t" s
+                }
+                /^}/ && in_group_block { in_group_block=0 }
+            ' "$config" > "$tmpmap"
+
+            # subscription list (so we emit entries even for subs with no nodes yet)
+            sub_names=$(awk '/^subscription[[:space:]]*\{/,/^\}/' "$config" \
+                | grep -E "^[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]*[[:space:]]*:" \
+                | sed -E "s|^[[:space:]]+([a-zA-Z_][a-zA-Z0-9_]*)[[:space:]]*:.*|\1|" \
+                | sort -u)
+
+            # Emit cache JSON: for each subscription, list the nodes belonging
+            # to any group whose filter referenced that subscription.
+            {
+                printf '{"updated_at":%s,"subscriptions":{' "$(date +%s)"
+                first_sub=1
+                for sub in $sub_names; do
+                    # find groups that subtag this sub
+                    groups_for_sub=$(awk -F'\t' -v s="$sub" '
+                        {
+                            n = split($2, arr, ",")
+                            for (i=1;i<=n;i++) if (arr[i]==s) { print $1; next }
+                        }
+                    ' "$tmpmap")
+                    # collect unique node names across those groups
+                    nodes_json=""
+                    if [ -n "$groups_for_sub" ]; then
+                        names=$(for g in $groups_for_sub; do
+                            awk -F'\t' -v g="$g" '$1==g {print $2}' "$tmpgroups"
+                        done | sort -u)
+                        first_n=1
+                        for n in $names; do
+                            if [ "$first_n" = "1" ]; then
+                                nodes_json='{"name":"'$n'","protocol":"","server":"","port":0}'
+                                first_n=0
+                            else
+                                nodes_json="$nodes_json"',{"name":"'$n'","protocol":"","server":"","port":0}'
+                            fi
+                        done
+                    fi
+                    [ "$first_sub" = "1" ] || printf ','
+                    printf '"%s":[%s]' "$sub" "$nodes_json"
+                    first_sub=0
+                done
+                printf '}}\n'
+            } > "$CACHE"
+            rm -f "$tmpgroups" "$tmpmap"
+            cat "$CACHE"
+            exit 0
+        fi
+
+        # ----- Path 2: wget+base64 fallback (works when dae is stopped) -----
         if [ ! -f "$config" ]; then
             printf '{}' > "$CACHE"
             cat "$CACHE"
