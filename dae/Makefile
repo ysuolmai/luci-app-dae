@@ -9,9 +9,13 @@ PKG_VERSION:=$(shell date "+%Y.%m.%d")
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-#PKG_SOURCE_URL:=https://github.com/daeuniverse/dae.git
-PKG_SOURCE_URL:=https://github.com/olicesx/dae.git
-GIT_BRANCH:=kdae
+# Use upstream daeuniverse/dae main. olicesx/kdae was useful in 2024-2025 for
+# its DNS lockless + runtime stats patches, but upstream merged equivalents
+# (PR #849 lockless DNS, PR #968 runtime metrics + node latency probing) by
+# 2026-04. The fork is no longer maintained by a dae core member and lags
+# behind on bpf fixes (e.g. #995 bpf_get_current_comm fallback).
+PKG_SOURCE_URL:=https://github.com/daeuniverse/dae.git
+GIT_BRANCH:=main
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_VERSION:=$(shell git ls-remote $(PKG_SOURCE_URL) $(GIT_BRANCH) | cut -c1-7)
 PKG_MIRROR_HASH:=
@@ -85,9 +89,6 @@ define Build/Prepare
 	( \
 		rm -rf $(PKG_BUILD_DIR) && git clone -b $(GIT_BRANCH) $(PKG_SOURCE_URL) $(PKG_BUILD_DIR) ; \
 		pushd $(PKG_BUILD_DIR) ; \
-		rm -rf outbound && git clone --depth=1 -b perf/complete-optimizations https://github.com/olicesx/outbound.git outbound ; \
-		go mod edit -replace github.com/daeuniverse/outbound=./outbound ; \
-		go get -u=patch ; \
 		git submodule update --init ; \
 		go mod tidy ; \
 		popd ; \

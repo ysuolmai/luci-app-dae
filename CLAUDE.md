@@ -15,7 +15,7 @@
 ├── CLAUDE.md (本文件)
 ├── .github/workflows/build.yml   # GH Actions：编 .ipk（ImmortalWrt 23.05.4 SDK）
 ├── dae/                          # dae 主程序包
-│   ├── Makefile                  # 从 olicesx/dae kdae 分支编译（Go + eBPF）
+│   ├── Makefile                  # 从 daeuniverse/dae main 编译（Go + eBPF；2026-05 从 olicesx/kdae 切回上游）
 │   └── files/                    # dae UCI config + init 脚本
 └── luci-app-dae/                 # LuCI UI
     ├── Makefile
