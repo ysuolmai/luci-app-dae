@@ -15,11 +15,11 @@ return view.extend({
     render: function() {
         var self = this;
         return Promise.all([
-            fs.read_direct('/etc/dae/config.dae', 'text').catch(function() {
-                return fs.read_direct('/etc/dae/example.dae', 'text').catch(function() {
-                    return '';
-                });
-            }),
+            // Only load the user's actual config. Do NOT fall back to example.dae —
+            // its comment-only "group { steam {...} }" placeholders get parsed as
+            // real empty groups and end up polluting the saved config. New users
+            // see a clean default-seeded form instead.
+            fs.read_direct('/etc/dae/config.dae', 'text').catch(function() { return ''; }),
             L.require('view/dae/dae-parser')
         ]).then(function(results) {
             var content = results[0] || '';

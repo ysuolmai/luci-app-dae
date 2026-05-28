@@ -221,6 +221,14 @@ var DaeParser = {
                 continue;
             }
 
+            // Group with NO filter AND NO policy (e.g. all-comments placeholder
+            // copied from example.dae like `group { steam { #filter... } }`) is
+            // semantically empty — drop it entirely instead of materializing
+            // a fake empty group card in the UI.
+            if (filterLines.length === 0 && policyLine === null) {
+                continue;
+            }
+
             var filter = { subscriptions: [], nodes: [], excludeKeywords: [], namePin: null };
             var policy = policyLine || 'min_moving_avg';
 

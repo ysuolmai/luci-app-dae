@@ -14,13 +14,29 @@
 
 CACHE=/tmp/dae-nodes-cache.json
 
-# Portable base64 decode: try -d (Linux/busybox), fall back to -D (macOS)
+# Portable base64 decode:
+#   - Linux/busybox coreutils-base64: base64 -d
+#   - macOS / BSD: base64 -D
+#   - busybox WITHOUT base64 applet (ImmortalWrt default!): openssl base64 -d -A
+# Probe order picks whichever exists; openssl is the most-likely-installed fallback
+# on minimal OpenWrt builds where the base64 applet is not compiled in.
 b64dec() {
-    if base64 -d </dev/null >/dev/null 2>&1; then
-        base64 -d 2>/dev/null
-    else
-        base64 -D 2>/dev/null
+    if command -v base64 >/dev/null 2>&1; then
+        if base64 -d </dev/null >/dev/null 2>&1; then
+            base64 -d 2>/dev/null
+            return
+        fi
+        if base64 -D </dev/null >/dev/null 2>&1; then
+            base64 -D 2>/dev/null
+            return
+        fi
     fi
+    if command -v openssl >/dev/null 2>&1; then
+        openssl base64 -d -A 2>/dev/null
+        return
+    fi
+    # No decoder available — emit nothing, caller treats subscription as plain text
+    return 1
 }
 
 # URL-decode %XX sequences using sed + shell

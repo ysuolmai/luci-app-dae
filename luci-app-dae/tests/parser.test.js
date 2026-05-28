@@ -387,6 +387,17 @@ test('parses multiple groups in one block', function() {
     assert.strictEqual(groups.parsed[1].name, 'b');
 });
 
+test('drops a comment-only group placeholder (no filter, no policy)', function() {
+    // mimicking example.dae's `group { steam { #filter: ... #policy: ... } }`
+    var content = "    steam {\n" +
+                  "        # filter: subtag(my_sub) && !name(keyword: 'ExpireAt:')\n" +
+                  "        # policy: min_moving_avg\n" +
+                  "    }";
+    var groups = DaeParser._parseGroup(content);
+    assert.strictEqual(groups.parsed.length, 0, 'should NOT materialize an empty group');
+    assert.strictEqual(groups.rawGroups.length, 0, 'and NOT escalate to rawGroups either');
+});
+
 test('unparseable group goes to rawGroups', function() {
     var content = "    weird {\n" +
                   "        filter: name(regex: '^HK.*$')\n" +
