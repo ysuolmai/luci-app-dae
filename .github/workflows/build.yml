@@ -60,7 +60,11 @@ jobs:
         working-directory: sdk
         run: |
           rm -rf package/feeds/luci/luci-app-dae feeds/luci/applications/luci-app-dae
-          cp -r ${{ github.workspace }}/luci-app-dae package/
+          # 关键：必须先删掉缓存里残留的 package/luci-app-dae。否则 `cp -r src dest/`
+          # 在 dest 已存在时会把源拷成子目录（package/luci-app-dae/luci-app-dae），
+          # 顶层旧源码原封不动 → buildroot 永远编第一次那份旧的。
+          rm -rf package/luci-app-dae
+          cp -rT ${{ github.workspace }}/luci-app-dae package/luci-app-dae
           # +dae 是运行时依赖；本 SDK 里没有 dae 包，patch 掉避免 defconfig 卡住。
           # 实际固件里 dae 已由主 CI 编进去，不影响安装。
           sed -i 's/LUCI_DEPENDS:=+dae/LUCI_DEPENDS:=/' package/luci-app-dae/Makefile
