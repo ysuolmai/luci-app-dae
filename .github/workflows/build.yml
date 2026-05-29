@@ -67,7 +67,10 @@ jobs:
       - name: Stage our luci-app-dae (override any feed copy)
         working-directory: sdk
         run: |
+          # 上游 ImmortalWrt 的 luci feed 自带 luci-app-dae（极简 UI）和 luci-app-daed，
+          # 与我们的同名会撞。连同 symlink 一起全删，确保只用我们的。
           rm -rf package/feeds/luci/luci-app-dae feeds/luci/applications/luci-app-dae
+          rm -rf package/feeds/luci/luci-app-daed feeds/luci/applications/luci-app-daed
           # 关键：必须先删掉缓存里残留的 package/luci-app-dae。否则 `cp -r src dest/`
           # 在 dest 已存在时会把源拷成子目录（package/luci-app-dae/luci-app-dae），
           # 顶层旧源码原封不动 → buildroot 永远编第一次那份旧的。
@@ -100,15 +103,19 @@ jobs:
           ls -lh artifacts/
           test -n "$(ls -A artifacts/)" || { echo "ERROR: no .ipk produced"; exit 1; }
           echo
-          echo "=== freshness check: config.js md5 inside .ipk vs source ==="
+          echo "=== freshness check: .ipk 是否含我们的 UI 标记 ==="
+          # 注意：LuCI 构建会 minify JS（LUCI_MINIFY_JS=1），所以 .ipk 里的字节 != 原始源码，
+          # 不能用 md5 比对。改为检查我们 UI 独有、上游极简版没有的方法名 _makeActionSelect
+          # （方法名/属性名 minify 不会改），确保编进去的是我们的包不是上游 feed 那份。
           tmp=$(mktemp -d)
           tar xzf artifacts/luci-app-dae_*.ipk -C "$tmp"
           tar xzf "$tmp"/data.tar.gz -C "$tmp"
-          IPK_MD5=$(md5sum "$tmp"/www/luci-static/resources/view/dae/config.js | cut -d' ' -f1)
-          SRC_MD5=$(md5sum luci-app-dae/htdocs/luci-static/resources/view/dae/config.js | cut -d' ' -f1)
-          echo "ipk    config.js md5: $IPK_MD5"
-          echo "source config.js md5: $SRC_MD5"
-          [ "$IPK_MD5" = "$SRC_MD5" ] && echo "OK: .ipk 用的是最新源码" || { echo "ERROR: .ipk config.js 与源码不一致（缓存污染）"; exit 1; }
+          CJS="$tmp"/www/luci-static/resources/view/dae/config.js
+          echo "ipk config.js 行数: $(wc -l < "$CJS")  大小: $(wc -c < "$CJS") bytes"
+          for MARK in _makeActionSelect namePin excludeKeywords; do
+            grep -q "$MARK" "$CJS" && echo "  ✓ 含 $MARK" || { echo "  ✗ 缺 $MARK → 编进去的是上游版本！"; exit 1; }
+          done
+          echo "OK: .ipk 用的是我们的 luci-app-dae"
 
       - uses: actions/upload-artifact@v4
         with:
