@@ -74,6 +74,16 @@ jobs:
           EOF
           make defconfig
 
+      - name: Purge stale build artifacts (cache-restored SDK 会带旧 build_dir/bin)
+        working-directory: sdk
+        run: |
+          # PKG_VERSION 是写死的静态串，buildroot 仅凭版本号判断"已编译"，
+          # 缓存恢复回来的 build_dir/.../luci-app-dae-*/.built stamp + bin 里的
+          # 旧 .ipk 会被直接复用，导致新源码编不进去。强制清掉这些残留。
+          rm -rf build_dir/*/luci-app-dae-* build_dir/*/luci-i18n-dae-* || true
+          rm -rf bin || true
+          echo "purged stale luci-app-dae build_dir + bin"
+
       - name: Build
         working-directory: sdk
         run: |
@@ -87,6 +97,16 @@ jobs:
           echo "=== artifacts ==="
           ls -lh artifacts/
           test -n "$(ls -A artifacts/)" || { echo "ERROR: no .ipk produced"; exit 1; }
+          echo
+          echo "=== freshness check: config.js md5 inside .ipk vs source ==="
+          tmp=$(mktemp -d)
+          tar xzf artifacts/luci-app-dae_*.ipk -C "$tmp"
+          tar xzf "$tmp"/data.tar.gz -C "$tmp"
+          IPK_MD5=$(md5sum "$tmp"/www/luci-static/resources/view/dae/config.js | cut -d' ' -f1)
+          SRC_MD5=$(md5sum luci-app-dae/htdocs/luci-static/resources/view/dae/config.js | cut -d' ' -f1)
+          echo "ipk    config.js md5: $IPK_MD5"
+          echo "source config.js md5: $SRC_MD5"
+          [ "$IPK_MD5" = "$SRC_MD5" ] && echo "OK: .ipk 用的是最新源码" || { echo "ERROR: .ipk config.js 与源码不一致（缓存污染）"; exit 1; }
 
       - uses: actions/upload-artifact@v4
         with:
