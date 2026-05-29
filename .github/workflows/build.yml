@@ -94,6 +94,10 @@ jobs:
           rm -rf bin || true
           echo "purged stale luci-app-dae build_dir + staging stamps + bin"
           ls build_dir/*/ 2>/dev/null | grep -i luci-app-dae && echo "WARN: 仍有残留" || echo "build_dir 已无 luci-app-dae 残留"
+          echo "=== DEBUG: package/luci-app-dae 里的 config.js md5 ==="
+          md5sum package/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js 2>/dev/null || echo "package 里没有 config.js!"
+          echo "=== DEBUG: sdk 全盘所有 config.js 副本 ==="
+          find . -path ./staging_dir/toolchain\* -prune -o -name config.js -print 2>/dev/null | while read f; do echo "$(md5sum "$f")"; done
 
       - name: Build
         working-directory: sdk
