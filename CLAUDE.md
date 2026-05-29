@@ -54,9 +54,18 @@ routing { ... }                       ← action 写 group 名（不是订阅名
 
 **默认配置**（第一次打开时）：
 - 1 个名为 `proxy` 的组，filter 勾选所有当前订阅，排除关键字 `ExpireAt`，策略 `min_moving_avg`
-- routing 预填 3 条 `direct` 规则 + `fallback → proxy`
-- DNS 预填 alidns/googledns + 国内/国外模板
+- routing 预填 5 条 `direct` 规则 + `fallback → proxy`，**前两条是打破 DNS 死锁的关键**：
+  - `pname(dae) -> direct`：dae 自身控制面流量直连
+  - `dip(8.8.8.8, 114.114.114.114) -> direct`：DNS upstream 强制直连
+- DNS 预填 IP 字面量 upstream：`alidns: udp://114.114.114.114:53`、`googledns: udp://8.8.8.8:53` + 国内/国外模板
 - 全局设置默认展开，字段名用**下划线**（`log_level`、`wan_interface` 等）
+
+**★ DNS bootstrap 死锁（必读，wan_interface 代理本机的前提）**：
+dae 默认把 DNS upstream 查询按 routing 走 `fallback: proxy`。但解析节点域名（如 hysteria2 的 `xxx.xyz`）要 DNS → DNS 走代理 → 用代理得先连节点（也是域名要 DNS）→ **死循环，所有节点 timeout**。
+- 修复 = routing 加 `dip(<dns upstream ip>) -> direct` + DNS upstream 用 **IP 字面量**（域名 upstream 自己又要 bootstrap 解析，照样死锁）。
+- 默认模板里 routing 的 dip 直连 IP 必须和 DNS upstream 的 IP 一致（都在 config.js 的 `_buildRoutingSection` / `_buildDNSSection` 里，改一个要同步另一个）。
+- **国内路由器注意**：8.8.8.8 在墙内被污染，foreign DNS 直连会拿到错误 IP，需换成未污染的境外 DNS（DoH/DoT 等）。
+- 诊断历史详见 `~/.claude/.../project_dae_router.md` 的"wan_interface=wan 真正根因"条。
 
 ---
 

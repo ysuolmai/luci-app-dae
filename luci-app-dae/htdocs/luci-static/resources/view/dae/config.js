@@ -456,12 +456,21 @@ return view.extend({
     _buildRoutingSection: function() {
         var self = this;
         var routing = ((self._config || {}).routing) || { rules: [], fallback: 'direct' };
-        // If no rules defined, seed the standard ones (private + cn IPs/domains → direct)
+        // If no rules defined, seed the standard ones.
+        // IMPORTANT — the first two rules break the DNS bootstrap deadlock that
+        // otherwise makes dae unable to proxy localhost when wan_interface is set:
+        //   pname(dae) -> direct         : dae's own control-plane traffic stays direct
+        //   dip(<dns upstream ips>) -> direct : DNS upstream queries MUST go direct,
+        //     otherwise dae routes them through the proxy group → but the proxy needs
+        //     DNS to resolve its node domain → deadlock, every node times out.
+        // These IPs must match the default DNS upstreams seeded in _buildDNSSection.
         if ((!routing.rules || routing.rules.length === 0)) {
             routing.rules = [
-                { condType: 'dip',    condValue: 'geoip:private', action: 'direct' },
-                { condType: 'dip',    condValue: 'geoip:cn',      action: 'direct' },
-                { condType: 'domain', condValue: 'geosite:cn',    action: 'direct' }
+                { condType: 'pname',  condValue: 'dae',                      action: 'direct' },
+                { condType: 'dip',    condValue: '8.8.8.8, 114.114.114.114', action: 'direct' },
+                { condType: 'dip',    condValue: 'geoip:private',            action: 'direct' },
+                { condType: 'dip',    condValue: 'geoip:cn',                 action: 'direct' },
+                { condType: 'domain', condValue: 'geosite:cn',              action: 'direct' }
             ];
             self._config.routing = routing;
         }
@@ -505,6 +514,18 @@ return view.extend({
         var self = this;
         var dns = ((self._config || {}).dns) || { upstream: {}, domestic: '', foreign: '', rawRouting: '' };
         var upstream = dns.upstream || {};
+        // Seed default upstreams (IP literals, NOT domains — a domain upstream would
+        // itself need bootstrap resolution and re-trigger the deadlock). These IPs
+        // must match the dip(...)->direct rule seeded in _buildRoutingSection.
+        // 国内 114.114.114.114 / 国外 8.8.8.8（境外路由器适用；国内路由器 8.8.8.8 会被
+        // 污染，需自行换成未污染的境外 DNS）。
+        if (Object.keys(upstream).length === 0 && !dns.rawRouting) {
+            upstream = { alidns: 'udp://114.114.114.114:53', googledns: 'udp://8.8.8.8:53' };
+            dns.upstream = upstream;
+            if (!dns.domestic) dns.domestic = 'alidns';
+            if (!dns.foreign)  dns.foreign  = 'googledns';
+            self._config.dns = dns;
+        }
         var upstreamNames = Object.keys(upstream);
         var section = E('div', { 'class': 'cbi-section', 'id': 'section-dns' });
         section.appendChild(E('h3', {}, _('DNS')));
