@@ -84,9 +84,16 @@ jobs:
           # PKG_VERSION 是写死的静态串，buildroot 仅凭版本号判断"已编译"，
           # 缓存恢复回来的 build_dir/.../luci-app-dae-*/.built stamp + bin 里的
           # 旧 .ipk 会被直接复用，导致新源码编不进去。强制清掉这些残留。
-          rm -rf build_dir/*/luci-app-dae-* build_dir/*/luci-i18n-dae-* || true
+          # LuCI 包的 PKG_BUILD_DIR 是 build_dir/<target>/luci-app-dae（无版本后缀），
+          # 里面有 .prepared_<hash> stamp + prepare 时拷进来的源码副本。缓存命中时
+          # prepare 被跳过、复用旧副本。必须连这个无横杠目录一起删。
+          rm -rf build_dir/*/luci-app-dae build_dir/*/luci-app-dae-* || true
+          # 顺手清掉 staging 里的 install stamp 和 pkginfo，避免半缓存状态
+          rm -rf staging_dir/*/root-*/stamp/.luci-app-dae* staging_dir/*/root-*/stamp/.luci-i18n-dae* || true
+          rm -rf staging_dir/*/pkginfo/luci-app-dae* || true
           rm -rf bin || true
-          echo "purged stale luci-app-dae build_dir + bin"
+          echo "purged stale luci-app-dae build_dir + staging stamps + bin"
+          ls build_dir/*/ 2>/dev/null | grep -i luci-app-dae && echo "WARN: 仍有残留" || echo "build_dir 已无 luci-app-dae 残留"
 
       - name: Build
         working-directory: sdk
