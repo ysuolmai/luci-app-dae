@@ -34,21 +34,29 @@ jobs:
           sudo apt-get install -yqq build-essential libncurses-dev zlib1g-dev \
             gawk git gettext libssl-dev xsltproc rsync wget unzip python3
 
-      - name: Cache SDK
+      # 只缓存不可变的 SDK 压缩包（按版本号 key），不缓存解压后的 sdk 目录。
+      # 历史教训：缓存整个 sdk/ 会把 build_dir/staging_dir/bin 这些 build state
+      # 一起冻结。actions/cache 只在 miss 时保存，之后永远命中那份首跑快照，
+      # 导致新源码编不进去（package 源码刷新了，但 install 复用 staging 旧副本）。
+      # 改成每次重新解压一份干净 SDK，从结构上杜绝 build state 残留。
+      - name: Cache SDK tarball
         id: cache-sdk
         uses: actions/cache@v4
         with:
-          path: sdk
-          key: sdk-immortalwrt-23.05.4-mediatek-filogic-v1
+          path: sdk.tar.xz
+          key: sdk-tarball-immortalwrt-23.05.4-mediatek-filogic-v1
 
       - name: Download SDK
         if: steps.cache-sdk.outputs.cache-hit != 'true'
         run: |
           URL=https://downloads.immortalwrt.org/releases/23.05.4/targets/mediatek/filogic/immortalwrt-sdk-23.05.4-mediatek-filogic_gcc-12.3.0_musl.Linux-x86_64.tar.xz
           wget -q "$URL" -O sdk.tar.xz
+
+      - name: Extract fresh SDK (每次都全新解压，无 build state 残留)
+        run: |
+          rm -rf sdk
           mkdir -p sdk
           tar -xf sdk.tar.xz -C sdk --strip-components=1
-          rm sdk.tar.xz
 
       - name: Setup feeds
         working-directory: sdk
@@ -77,27 +85,6 @@ jobs:
           CONFIG_PACKAGE_luci-i18n-dae-zh-cn=y
           EOF
           make defconfig
-
-      - name: Purge stale build artifacts (cache-restored SDK 会带旧 build_dir/bin)
-        working-directory: sdk
-        run: |
-          # PKG_VERSION 是写死的静态串，buildroot 仅凭版本号判断"已编译"，
-          # 缓存恢复回来的 build_dir/.../luci-app-dae-*/.built stamp + bin 里的
-          # 旧 .ipk 会被直接复用，导致新源码编不进去。强制清掉这些残留。
-          # LuCI 包的 PKG_BUILD_DIR 是 build_dir/<target>/luci-app-dae（无版本后缀），
-          # 里面有 .prepared_<hash> stamp + prepare 时拷进来的源码副本。缓存命中时
-          # prepare 被跳过、复用旧副本。必须连这个无横杠目录一起删。
-          rm -rf build_dir/*/luci-app-dae build_dir/*/luci-app-dae-* || true
-          # 顺手清掉 staging 里的 install stamp 和 pkginfo，避免半缓存状态
-          rm -rf staging_dir/*/root-*/stamp/.luci-app-dae* staging_dir/*/root-*/stamp/.luci-i18n-dae* || true
-          rm -rf staging_dir/*/pkginfo/luci-app-dae* || true
-          rm -rf bin || true
-          echo "purged stale luci-app-dae build_dir + staging stamps + bin"
-          ls build_dir/*/ 2>/dev/null | grep -i luci-app-dae && echo "WARN: 仍有残留" || echo "build_dir 已无 luci-app-dae 残留"
-          echo "=== DEBUG: package/luci-app-dae 里的 config.js md5 ==="
-          md5sum package/luci-app-dae/htdocs/luci-static/resources/view/dae/config.js 2>/dev/null || echo "package 里没有 config.js!"
-          echo "=== DEBUG: sdk 全盘所有 config.js 副本 ==="
-          find . -path ./staging_dir/toolchain\* -prune -o -name config.js -print 2>/dev/null | while read f; do echo "$(md5sum "$f")"; done
 
       - name: Build
         working-directory: sdk
